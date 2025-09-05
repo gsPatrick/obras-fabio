@@ -1,18 +1,18 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { FlowBuilder } from "./FlowBuilder";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 import { Button } from "../../../../components/ui/button";
-import { Loader2 } from 'lucide-react';
+import { Loader2, ListTodo,PlusCircle } from 'lucide-react';
 import api from '../../../../lib/api';
 import { Skeleton } from '../../../../components/ui/skeleton';
 
 export default function MontagemFluxosPage() {
-  // Estados de carregamento refinados
-  const [isInitialLoading, setIsInitialLoading] = useState(true); // Para a carga inicial de workflows e steps
-  const [isWorkflowLoading, setIsWorkflowLoading] = useState(false); // Para quando um workflow é selecionado
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isWorkflowLoading, setIsWorkflowLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   const [workflows, setWorkflows] = useState([]);
@@ -21,7 +21,6 @@ export default function MontagemFluxosPage() {
   
   const [flowItems, setFlowItems] = useState([]);
 
-  // Busca a lista de workflows e a lista de todas as etapas disponíveis na montagem do componente
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsInitialLoading(true);
@@ -41,14 +40,13 @@ export default function MontagemFluxosPage() {
     fetchInitialData();
   }, []);
 
-  // Busca os detalhes de um workflow específico quando o usuário seleciona no dropdown
   const handleWorkflowChange = useCallback(async (workflowId) => {
     if (!workflowId) {
       setFlowItems([]);
       setSelectedWorkflowId('');
       return;
     }
-    setIsWorkflowLoading(true); // Ativa o loading específico do workflow
+    setIsWorkflowLoading(true);
     setSelectedWorkflowId(workflowId);
     try {
       const response = await api.get(`/workflows/${workflowId}`);
@@ -61,7 +59,7 @@ export default function MontagemFluxosPage() {
       toast.error("Falha ao carregar as etapas do fluxo selecionado.");
       setFlowItems([]);
     } finally {
-      setIsWorkflowLoading(false); // Desativa o loading específico do workflow
+      setIsWorkflowLoading(false);
     }
   }, []);
 
@@ -87,6 +85,69 @@ export default function MontagemFluxosPage() {
       setIsSaving(false);
     }
   };
+  
+  // --- NOVO: Renderização condicional se não houver etapas ---
+  const renderContent = () => {
+    if (isInitialLoading) {
+      return <Skeleton className="h-[500px] w-full" />;
+    }
+
+    if (allSteps.length === 0) {
+      return (
+        <div className="text-center py-10 border-2 border-dashed rounded-lg">
+          <ListTodo className="mx-auto h-12 w-12 text-muted-foreground" />
+          <h3 className="mt-4 text-lg font-semibold">Nenhuma Etapa Cadastrada</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Para montar um fluxo, você precisa primeiro criar as etapas que irão compô-lo.
+          </p>
+          <div className="mt-6">
+            <Link href="/configuracoes/etapas">
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Cadastrar Etapas
+              </Button>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="flex flex-col md:flex-row items-center gap-4 mb-6 p-4 border rounded-lg">
+          <div className="w-full md:w-auto flex-grow">
+              <label className="text-sm font-medium">Tipo de Solicitação</label>
+              <Select onValueChange={handleWorkflowChange} value={selectedWorkflowId} disabled={isInitialLoading}>
+                  <SelectTrigger>
+                      <SelectValue placeholder={isInitialLoading ? "Carregando fluxos..." : "Selecione um tipo..."} />
+                  </SelectTrigger>
+                  <SelectContent>
+                      {workflows.map(wf => (
+                        <SelectItem key={wf.id} value={wf.id}>{wf.name}</SelectItem>
+                      ))}
+                  </SelectContent>
+              </Select>
+          </div>
+          <div className="w-full md:w-auto self-end">
+              <Button className="w-full" onClick={handleSaveFlow} disabled={isSaving || isInitialLoading || !selectedWorkflowId}>
+                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSaving ? "Salvando..." : "Salvar Fluxo"}
+              </Button>
+          </div>
+        </div>
+        
+        {isWorkflowLoading ? (
+          <Skeleton className="h-[400px] w-full" />
+        ) : (
+          <FlowBuilder 
+              allSteps={allSteps} 
+              flowItems={flowItems}
+              setFlowItems={setFlowItems}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="container mx-auto py-2">
@@ -96,40 +157,7 @@ export default function MontagemFluxosPage() {
           Selecione um tipo de solicitação e arraste as etapas para montar o fluxo desejado.
         </p>
       </div>
-
-      <div className="flex flex-col md:flex-row items-center gap-4 mb-6 p-4 border rounded-lg">
-        <div className="w-full md:w-auto flex-grow">
-            <label className="text-sm font-medium">Tipo de Solicitação</label>
-            {/* O seletor agora é desabilitado apenas durante a carga inicial */}
-            <Select onValueChange={handleWorkflowChange} value={selectedWorkflowId} disabled={isInitialLoading}>
-                <SelectTrigger>
-                    <SelectValue placeholder={isInitialLoading ? "Carregando fluxos..." : "Selecione um tipo..."} />
-                </SelectTrigger>
-                <SelectContent>
-                    {workflows.map(wf => (
-                      <SelectItem key={wf.id} value={wf.id}>{wf.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
-        <div className="w-full md:w-auto self-end">
-            <Button className="w-full" onClick={handleSaveFlow} disabled={isSaving || isInitialLoading || !selectedWorkflowId}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSaving ? "Salvando..." : "Salvar Fluxo"}
-            </Button>
-        </div>
-      </div>
-      
-      {/* Exibe skeleton enquanto o workflow específico está carregando */}
-      {isWorkflowLoading ? (
-        <Skeleton className="h-[400px] w-full" />
-      ) : (
-        <FlowBuilder 
-            allSteps={allSteps} 
-            flowItems={flowItems}
-            setFlowItems={setFlowItems}
-        />
-      )}
+      {renderContent()}
     </div>
   );
 }

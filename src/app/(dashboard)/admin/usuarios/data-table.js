@@ -2,7 +2,7 @@
 import * as React from "react"
 import { toast } from "sonner";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react" // Adicionado Download e Loader2
 import api from "../../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table"
 import { Button } from "../../../../components/ui/button"
@@ -14,6 +14,7 @@ import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 export function DataTable({ columns }) {
   const [data, setData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isExporting, setIsExporting] = React.useState(false); // Novo estado para exportação
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
@@ -48,21 +49,52 @@ export function DataTable({ columns }) {
 
   const handleSave = async (formData) => {
     try {
-      let savedUser; // Variável para armazenar o resultado
+      let savedUser;
       if (editingData?.id) {
         const response = await api.put(`/users/${editingData.id}`, formData);
-        savedUser = response.data; // Captura o usuário atualizado
+        savedUser = response.data;
         toast.success("Usuário atualizado com sucesso!");
       } else {
         const response = await api.post('/users', formData);
-        savedUser = response.data; // Captura o usuário criado
+        savedUser = response.data;
         toast.success("Usuário criado com sucesso!");
       }
       fetchData();
-      return savedUser; // Retorna o objeto do usuário para o dialog
+      return savedUser;
     } catch (error) {
       toast.error(error.response?.data?.error || "Erro ao salvar usuário.");
-      return null; // Retorna nulo em caso de falha
+      return null;
+    }
+  };
+
+  // --- NOVA FUNÇÃO DE EXPORTAÇÃO ---
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.info("A exportação foi iniciada. Aguarde...");
+    try {
+        const nameFilter = columnFilters.find(f => f.id === 'name')?.value || '';
+        const params = new URLSearchParams({ name: nameFilter });
+        
+        const response = await api.get('/users/export', {
+            params,
+            responseType: 'blob', // Essencial para receber o arquivo
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        const filename = `usuarios-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Download do arquivo de usuários concluído!");
+
+    } catch (error) {
+        toast.error("Falha ao exportar os dados.");
+    } finally {
+        setIsExporting(false);
     }
   };
 
@@ -72,9 +104,15 @@ export function DataTable({ columns }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-4 gap-4">
         <Input placeholder="Filtrar por nome..." value={(table.getColumn("name")?.getFilterValue()) ?? ""} onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)} className="max-w-sm"/>
-        <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Novo Usuário</Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                Exportar
+            </Button>
+            <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Novo Usuário</Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>

@@ -11,7 +11,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react"
 
 import api from "../../../lib/api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
@@ -21,10 +21,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { FormDialog } from "./form-dialog"
 import { ConfirmationDialog } from "../components/ConfirmationDialog"
 
-export function DataTable({ columns, data: initialData }) {
-  // A resposta da API parece ser um objeto, então precisamos extrair o array
+export function DataTable({ columns }) {
   const [data, setData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isExporting, setIsExporting] = React.useState(false);
   const [sorting, setSorting] = React.useState([])
   const [columnFilters, setColumnFilters] = React.useState([])
   
@@ -38,7 +38,6 @@ export function DataTable({ columns, data: initialData }) {
     setIsLoading(true);
     try {
       const response = await api.get('/companies');
-      // Ajuste para pegar o array de 'companies' da resposta
       setData(response.data.companies || []); 
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
@@ -94,8 +93,43 @@ export function DataTable({ columns, data: initialData }) {
       return true;
     } catch (error) {
       console.error("Erro ao salvar cliente:", error);
-      toast.error(error.response?.data?.message || "Erro ao salvar cliente.");
+      const errorMessage = error.response?.data?.error || "Erro ao salvar cliente.";
+      toast.error(errorMessage);
       return false;
+    }
+  };
+  
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.info("A exportação foi iniciada. Aguarde...");
+    try {
+        const tradeNameFilter = columnFilters.find(f => f.id === 'tradeName')?.value || '';
+        const cnpjFilter = columnFilters.find(f => f.id === 'cnpj')?.value || '';
+        const params = new URLSearchParams({ 
+            tradeName: tradeNameFilter,
+            cnpj: cnpjFilter 
+        });
+        
+        const response = await api.get('/companies/export', {
+            params,
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        const filename = `clientes-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Download do arquivo de clientes concluído!");
+
+    } catch (error) {
+        toast.error("Falha ao exportar os dados.");
+    } finally {
+        setIsExporting(false);
     }
   };
   
@@ -137,7 +171,7 @@ export function DataTable({ columns, data: initialData }) {
         )
       }
     }
-  ], [columns])
+  ], [columns]);
 
   const table = useReactTable({
     data,
@@ -156,8 +190,7 @@ export function DataTable({ columns, data: initialData }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
-        {/* --- CORREÇÃO APLICADA AQUI --- */}
+      <div className="flex items-center justify-between py-4 gap-4">
         <Input
           placeholder="Filtrar por razão social..."
           value={(table.getColumn("corporateName")?.getFilterValue()) ?? ""}
@@ -166,10 +199,16 @@ export function DataTable({ columns, data: initialData }) {
           }
           className="max-w-sm"
         />
-        <Button onClick={handleCreate}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Cliente
-        </Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                Exportar
+            </Button>
+            <Button onClick={handleCreate}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Novo Cliente
+            </Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>

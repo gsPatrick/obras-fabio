@@ -23,17 +23,21 @@ export function ActionPanel({ solicitation, userProfile, refetchData }) {
       if (solicitation && solicitation.workflowId) {
         setIsTransitionsLoading(true);
         try {
+          // A API de workflows nos diz quais são as próximas etapas permitidas
           const response = await api.get(`/workflows/${solicitation.workflowId}`);
           const workflowSteps = response.data.workflowSteps || [];
           const currentStepConfig = workflowSteps.find(ws => ws.step.name === solicitation.status);
           
-          if (currentStepConfig && currentStepConfig.allowedNextStepIds) {
+          if (currentStepConfig && currentStepConfig.allowedNextStepIds && currentStepConfig.allowedNextStepIds.length > 0) {
+            // Se há próximas etapas definidas, busca os detalhes delas
             const allStepsResponse = await api.get('/steps');
             const allSteps = allStepsResponse.data.steps || [];
             const nextSteps = allSteps.filter(step => currentStepConfig.allowedNextStepIds.includes(step.id));
             setAllowedNextSteps(nextSteps);
           } else {
-            setAllowedNextSteps([]); // Nenhuma transição explícita definida
+            // Se allowedNextStepIds for vazio ou nulo, significa que qualquer transição é possível (para o perfil correto)
+            // ou que é o fim do fluxo. Por segurança, limpamos o array.
+            setAllowedNextSteps([]);
           }
         } catch (error) {
           console.error("Failed to fetch allowed transitions", error);
@@ -62,7 +66,6 @@ export function ActionPanel({ solicitation, userProfile, refetchData }) {
     }
   };
   
-  // Função para o formulário do RH/Admin
   const handleFormSubmit = (e) => {
     e.preventDefault();
     if (!nextStepName) {
@@ -72,27 +75,28 @@ export function ActionPanel({ solicitation, userProfile, refetchData }) {
     handleStatusUpdate(nextStepName, notes);
   };
 
-  // Renderiza o painel de acordo com o perfil e o status da solicitação
+  // --- LÓGICA DE RENDERIZAÇÃO REFINADA ---
   const renderPanelContent = () => {
-    // Ação da Gestão para aprovar/reprovar
-    const isManagerActionRequired = allowedNextSteps.some(step => step.defaultProfile === 'GESTAO' || step.name === 'APROVADO_PELA_GESTAO' || step.name === 'REPROVADO_PELA_GESTAO');
-    if (userProfile === 'GESTAO' && isManagerActionRequired) {
-      const approvalStep = allowedNextSteps.find(s => s.name.includes('APROVADO'));
-      const rejectionStep = allowedNextSteps.find(s => s.name.includes('REPROVADO'));
+    // Cenário 1: Ação da GESTÃO para aprovar/reprovar a solicitação inicial.
+    // O status inicial deve ser algo como "EM_ANALISE_GESTAO".
+    const isManagerApprovalStep = solicitation.status === 'EM_ANALISE_GESTAO';
+    if (userProfile === 'GESTAO' && isManagerApprovalStep) {
       return (
         <CardContent className="space-y-4">
           <div className="space-y-2"><Label htmlFor="notes">Observações (Obrigatório para reprovar)</Label><Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
           <div className="flex gap-4">
-            {approvalStep && <Button className="flex-1" onClick={() => handleStatusUpdate(approvalStep.name, notes)} disabled={isLoading}>Aprovar</Button>}
-            {rejectionStep && <Button variant="destructive" className="flex-1" onClick={() => handleStatusUpdate(rejectionStep.name, notes)} disabled={isLoading || !notes}>Reprovar</Button>}
+             {/* O nome do próximo status ('APROVADO_PELA_GESTAO') deve existir na tabela Steps */}
+            <Button className="flex-1" onClick={() => handleStatusUpdate('APROVADO_PELA_GESTAO', notes || 'Aprovado pela gestão.')} disabled={isLoading}>Aprovar</Button>
+            {/* O nome do próximo status ('REPROVADO_PELA_GESTAO') deve existir na tabela Steps */}
+            <Button variant="destructive" className="flex-1" onClick={() => handleStatusUpdate('REPROVADO_PELA_GESTAO', notes)} disabled={isLoading || !notes}>Reprovar</Button>
           </div>
         </CardContent>
       );
     }
 
-    // Ação do RH/Admin para avançar o fluxo
-    const isRhOrAdminAction = userProfile === 'RH' || userProfile === 'ADMIN';
-    if (isRhOrAdminAction && allowedNextSteps.length > 0) {
+    // Cenário 2: Ação do RH/Admin para avançar o fluxo, DESDE QUE não seja a etapa de aprovação da gestão.
+    const isRhOrAdminAction = (userProfile === 'RH' || userProfile === 'ADMIN') && !isManagerApprovalStep;
+    if (isRhOrAdminAction && (allowedNextSteps.length > 0 || isTransitionsLoading)) {
       return (
         <form onSubmit={handleFormSubmit}>
           <CardContent className="space-y-4">
@@ -109,6 +113,7 @@ export function ActionPanel({ solicitation, userProfile, refetchData }) {
       );
     }
     
+    // Cenário Padrão: Nenhuma ação disponível
     return <CardContent><p className="text-sm text-muted-foreground">Nenhuma ação disponível para seu perfil nesta etapa.</p></CardContent>;
   };
 

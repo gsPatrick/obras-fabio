@@ -6,28 +6,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { useAuth } from '../../../../hooks/useAuth'; // Importando nosso hook de autenticação
 import { Skeleton } from '../../../../components/ui/skeleton';
 
-// Agora, os tipos de solicitação têm uma propriedade 'profiles' para controle de acesso
+// --- AJUSTE DE PERMISSÃO APLICADO AQUI ---
 const requestTypes = [
   {
     href: "/solicitacoes/nova/admissao",
     title: "Admissão",
     description: "Iniciar o processo para contratar um novo colaborador.",
     icon: UserPlus,
-    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'], // Todos podem solicitar uma nova admissão
+    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'],
   },
   {
     href: "/solicitacoes/nova/desligamento",
     title: "Desligamento",
     description: "Formalizar o desligamento de um colaborador.",
     icon: UserMinus,
-    profiles: ['ADMIN', 'RH', 'GESTAO'], // Apenas perfis internos podem desligar
+    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'], // Adicionado SOLICITANTE
   },
   {
     href: "/solicitacoes/nova/substituicao",
     title: "Substituição",
     description: "Solicitar a substituição de um colaborador existente.",
     icon: Repeat,
-    profiles: ['ADMIN', 'RH', 'GESTAO'], // Apenas perfis internos podem substituir
+    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'], // Adicionado SOLICITANTE
   },
 ];
 
@@ -81,6 +81,12 @@ export default function NovaSolicitacaoPage() {
             </Card>
           </Link>
         ))}
+         {/* Adiciona uma mensagem caso nenhum tipo esteja disponível */}
+        {availableRequestTypes.length === 0 && (
+            <p className="col-span-full text-center text-muted-foreground">
+                Nenhum tipo de solicitação disponível para o seu perfil.
+            </p>
+        )}
       </div>
     </div>
   );

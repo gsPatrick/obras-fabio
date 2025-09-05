@@ -3,8 +3,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select"
 import { MultiSelect } from "./multi-select"
 
-// Esta função gera as colunas dinamicamente, pois precisa da lista de todas as etapas
-// e da função de atualização do componente pai.
 export const getColumns = (allSteps, onUpdate) => [
   {
     accessorKey: "order",
@@ -21,18 +19,28 @@ export const getColumns = (allSteps, onUpdate) => [
     header: "Perfil Responsável (Override)",
     cell: ({ row }) => {
       const currentStep = row.original;
+      // --- CORREÇÃO APLICADA AQUI ---
+      // O valor do select será o override ou 'default' se for nulo.
+      const selectedValue = currentStep.profileOverride || 'default';
+
+      const handleValueChange = (newValue) => {
+        // Se o usuário selecionar 'default', enviamos null para a API.
+        const valueToUpdate = newValue === 'default' ? null : newValue;
+        onUpdate(currentStep.id, 'profileOverride', valueToUpdate);
+      };
+
       return (
         <Select 
-            // O valor é o override, ou uma string vazia para usar o padrão
-            value={currentStep.profileOverride || ''}
-            onValueChange={(newValue) => onUpdate(currentStep.id, 'profileOverride', newValue || null)} // Envia nulo se "Padrão" for selecionado
+            value={selectedValue}
+            onValueChange={handleValueChange}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Padrão" />
+            {/* O SelectValue agora exibe o valor selecionado ou o placeholder */}
+            <SelectValue placeholder={`Padrão (${currentStep.defaultProfile})`} />
           </SelectTrigger>
           <SelectContent>
-            {/* A primeira opção sempre reseta para o padrão */}
-            <SelectItem value="">Padrão ({currentStep.defaultProfile})</SelectItem>
+            {/* O item "Padrão" agora tem um valor não-vazio */}
+            <SelectItem value="default">Padrão ({currentStep.defaultProfile})</SelectItem>
             <SelectItem value="ADMIN">Admin</SelectItem>
             <SelectItem value="RH">RH</SelectItem>
             <SelectItem value="GESTAO">Gestão</SelectItem>
@@ -47,12 +55,10 @@ export const getColumns = (allSteps, onUpdate) => [
     header: "Próximas Etapas Possíveis",
     cell: ({ row }) => {
       const currentStep = row.original;
-      // Opções para o MultiSelect são todas as etapas, exceto a própria etapa
       const options = allSteps
         .filter(step => step.id !== currentStep.id)
         .map(step => ({ value: step.id, label: step.name }));
       
-      // Encontra os objetos completos das etapas selecionadas com base nos IDs
       const selected = (currentStep.allowedNextStepIds || []).map(stepId => 
         options.find(opt => opt.value === stepId)
       ).filter(Boolean);

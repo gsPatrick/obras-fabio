@@ -9,31 +9,47 @@ import { Input } from "../../../../components/ui/input";
 import { Label } from "../../../../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../components/ui/select";
 import { Switch } from "../../../../components/ui/switch";
-import { MultiSelect } from '../../configuracoes/alocacao-transicoes/multi-select'; // Reutilizando o MultiSelect
+import { MultiSelect } from '../../configuracoes/alocacao-transicoes/multi-select';
 
 export function FormDialog({ open, onOpenChange, initialData, onSave }) {
   const isEditing = Boolean(initialData);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', profile: '', password: '', isActive: true });
   
-  // Estados para associação de empresas
   const [allCompanies, setAllCompanies] = useState([]);
   const [selectedCompanies, setSelectedCompanies] = useState([]);
   const [isAssociationLoading, setIsAssociationLoading] = useState(false);
 
   const showCompanyAssociation = formData.profile === 'GESTAO' || formData.profile === 'SOLICITANTE';
 
+  // --- LÓGICA DO useEffect SIMPLIFICADA E CORRIGIDA ---
+  useEffect(() => {
+    // Popula o formulário com dados iniciais ou reseta quando o modal abre
+    if (open) {
+      if (initialData) {
+        setFormData({ name: initialData.name || '', email: initialData.email || '', phone: initialData.phone || '', profile: initialData.profile || '', password: '', isActive: initialData.isActive });
+      } else {
+        setFormData({ name: '', email: '', phone: '', profile: '', password: '', isActive: true });
+      }
+      // Sempre reseta as empresas selecionadas ao abrir o modal
+      setSelectedCompanies([]);
+    }
+  }, [open, initialData]);
+
+  // useEffect separado para lidar apenas com a busca de dados de associação
   useEffect(() => {
     const fetchAssociationData = async () => {
-      if (open && showCompanyAssociation) {
+      // Condição para mostrar o campo de associação
+      if (open && (formData.profile === 'GESTAO' || formData.profile === 'SOLICITANTE')) {
         setIsAssociationLoading(true);
         try {
           const companiesRes = await api.get('/companies');
           setAllCompanies(companiesRes.data.companies.map(c => ({ value: c.id, label: c.corporateName })) || []);
 
+          // Se estiver editando um usuário que já tem associações, carrega-as
           if (isEditing && initialData.id) {
             const associatedRes = await api.get(`/associations/users/${initialData.id}/companies`);
-            setSelectedCompanies(associatedRes.data.map(c => ({ value: c.id, label: c.tradeName })) || []);
+            setSelectedCompanies(associatedRes.data.map(c => ({ value: c.id, label: c.corporateName })) || []);
           }
         } catch (error) {
           toast.error("Falha ao carregar dados de associação de empresas.");
@@ -43,16 +59,8 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
       }
     };
     
-    if (open) {
-      if (initialData) {
-        setFormData({ name: initialData.name || '', email: initialData.email || '', phone: initialData.phone || '', profile: initialData.profile || '', password: '', isActive: initialData.isActive });
-      } else {
-        setFormData({ name: '', email: '', phone: '', profile: '', password: '', isActive: true });
-      }
-      setSelectedCompanies([]); // Reseta ao abrir
-      fetchAssociationData();
-    }
-  }, [open, initialData, isEditing, showCompanyAssociation]);
+    fetchAssociationData();
+  }, [open, isEditing, initialData, formData.profile]); // Depende do perfil para ser reativado
 
   const handleChange = (id, value) => setFormData(prev => ({ ...prev, [id]: value }));
 
@@ -63,10 +71,8 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
     if (!payload.password) delete payload.password;
     if (!payload.phone) delete payload.phone;
     
-    // onSave retorna o usuário salvo, incluindo seu ID
     const savedUser = await onSave(payload);
 
-    // Se o usuário foi salvo com sucesso e o perfil requer associação
     if (savedUser && showCompanyAssociation) {
         try {
             const companyIds = selectedCompanies.map(c => c.value);
@@ -97,13 +103,14 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
               <Select value={formData.profile} onValueChange={(value) => handleChange('profile', value)} required>
                 <SelectTrigger><SelectValue placeholder="Selecione um perfil" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">Admin</SelectItem><SelectItem value="RH">RH</SelectItem>
-                  <SelectItem value="GESTAO">Gestão</SelectItem><SelectItem value="SOLICITANTE">Solicitante</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="RH">RH</SelectItem>
+                  <SelectItem value="GESTAO">Gestão</SelectItem>
+                  <SelectItem value="SOLICITANTE">Solicitante</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Campo de Associação de Empresas Condicional */}
             {showCompanyAssociation && (
               <div className="space-y-2">
                 <Label htmlFor="companies">Empresas Associadas</Label>

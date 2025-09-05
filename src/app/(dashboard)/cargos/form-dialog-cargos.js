@@ -52,14 +52,14 @@ export function FormDialogCargos({ open, onOpenChange, initialData, onSave }) {
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSave}>
           <DialogHeader>
-            <DialogTitle>{isEditing ? "Editar" : "Novo"} Cargo</DialogTitle>
+            <DialogTitle>{isEditing ? "Editar" : "Nova"} Categoria</DialogTitle>
             <DialogDescription>
-              Preencha os dados do cargo abaixo.
+              Preencha os dados da categoria (cargo) abaixo.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome do Cargo</Label>
+              <Label htmlFor="name">Nome da Categoria</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -74,7 +74,7 @@ export function FormDialogCargos({ open, onOpenChange, initialData, onSave }) {
                 id="description"
                 value={formData.description}
                 onChange={handleChange}
-                placeholder="Descreva as atribuições do cargo"
+                placeholder="Descreva as atribuições da categoria"
               />
             </div>
           </div>
@@ -84,7 +84,7 @@ export function FormDialogCargos({ open, onOpenChange, initialData, onSave }) {
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Salvando..." : "Salvar Cargo"}
+              {isLoading ? "Salvando..." : "Salvar Categoria"}
             </Button>
           </DialogFooter>
         </form>

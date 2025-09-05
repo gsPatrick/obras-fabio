@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react"
 
 import api from "../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
@@ -23,6 +23,7 @@ import { ConfirmationDialog } from "../components/ConfirmationDialog";
 export function DataTable({ columns, filterBy, filterValue }) {
   const [data, setData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isExporting, setIsExporting] = React.useState(false);
 
   const [sorting, setSorting] = React.useState([])
   const [columnFilters, setColumnFilters] = React.useState([])
@@ -38,8 +39,6 @@ export function DataTable({ columns, filterBy, filterValue }) {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      // A API não suporta os filtros de departamento/cargo por nome, então faremos no front-end
-      // Se a API suportasse, a lógica seria similar à de contratos.
       const response = await api.get('/employees', { params });
       let employees = response.data.employees || [];
 
@@ -98,6 +97,37 @@ export function DataTable({ columns, filterBy, filterValue }) {
     }
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.info("A exportação foi iniciada. Aguarde...");
+    try {
+        const nameFilter = columnFilters.find(f => f.id === 'name')?.value || '';
+        const params = new URLSearchParams({ name: nameFilter });
+        
+        const response = await api.get('/employees/export', {
+            params,
+            responseType: 'blob',
+        });
+
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        const filename = `pessoas-${new Date().toISOString().slice(0, 10)}.xlsx`;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("Download do arquivo de pessoas concluído!");
+
+    } catch (error) {
+        toast.error("Falha ao exportar os dados.");
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
+
   const tableColumns = React.useMemo(() => [
     ...columns,
     {
@@ -131,14 +161,20 @@ export function DataTable({ columns, filterBy, filterValue }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-4 gap-4">
         <Input
           placeholder="Filtrar por nome..."
           value={(table.getColumn("name")?.getFilterValue()) ?? ""}
           onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Adicionar Pessoa</Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                Exportar
+            </Button>
+            <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Adicionar Pessoa</Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>

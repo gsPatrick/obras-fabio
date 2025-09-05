@@ -16,27 +16,44 @@ import { Skeleton } from "../../../components/ui/skeleton"
 
 export default function RelatoriosPage() {
     const [date, setDate] = React.useState({ from: new Date(new Date().getFullYear(), 0, 1), to: new Date() });
-    const [companies, setCompanies] = React.useState([]);
+    
     const [selectedCompany, setSelectedCompany] = React.useState('');
+    const [selectedContract, setSelectedContract] = React.useState('');
+    
+    const [companies, setCompanies] = React.useState([]);
+    const [contracts, setContracts] = React.useState([]);
     
     const [stats, setStats] = React.useState(null);
     const [overviewData, setOverviewData] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
-    // Busca a lista de empresas para o filtro
     React.useEffect(() => {
         const fetchCompanies = async () => {
             try {
                 const response = await api.get('/companies');
                 setCompanies(response.data.companies || []);
-            } catch (error) {
-                toast.error("Falha ao carregar lista de empresas.");
-            }
+            } catch (error) { toast.error("Falha ao carregar lista de empresas."); }
         };
         fetchCompanies();
     }, []);
 
-    // Busca os dados dos relatórios sempre que os filtros mudarem
+    React.useEffect(() => {
+        const fetchContracts = async () => {
+          if (selectedCompany) {
+            setContracts([]);
+            setSelectedContract('');
+            try {
+              const response = await api.get(`/contracts?companyId=${selectedCompany}`);
+              setContracts(response.data.contracts || []);
+            } catch (error) { toast.error("Falha ao carregar contratos."); }
+          } else {
+            setContracts([]);
+            setSelectedContract('');
+          }
+        };
+        fetchContracts();
+    }, [selectedCompany]);
+
     React.useEffect(() => {
         const fetchReportData = async () => {
             setIsLoading(true);
@@ -45,6 +62,7 @@ export default function RelatoriosPage() {
                 if (date?.from) params.append('startDate', date.from.toISOString());
                 if (date?.to) params.append('endDate', date.to.toISOString());
                 if (selectedCompany) params.append('companyId', selectedCompany);
+                if (selectedContract) params.append('contractId', selectedContract);
 
                 const [statsRes, overviewRes] = await Promise.all([
                     api.get('/reports/stats', { params }),
@@ -59,22 +77,35 @@ export default function RelatoriosPage() {
             }
         };
         fetchReportData();
-    }, [date, selectedCompany]);
+    }, [date, selectedCompany, selectedContract]);
 
 
   return (
     <div className="container mx-auto py-2">
       <div className="mb-6"><h1 className="text-3xl font-bold">Relatórios e Métricas</h1><p className="text-muted-foreground mt-1">Filtre e analise os dados da sua organização.</p></div>
       <Card className="mb-6">
-        <CardContent className="flex flex-col md:flex-row items-center gap-4 p-4">
-            <div className="grid gap-2 flex-1">
-                <Popover><PopoverTrigger asChild><Button id="date" variant={"outline"} className={cn("w-full md:w-[300px] justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date?.from ? (date.to ? (<>{format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}</>) : (format(date.from, "LLL dd, y"))) : (<span>Escolha um período</span>)}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover>
-            </div>
-            <Select onValueChange={setSelectedCompany} value={selectedCompany}>
-                <SelectTrigger className="w-full md:w-[280px]"><SelectValue placeholder="Filtrar por Empresa" /></SelectTrigger>
-                <SelectContent><SelectItem value="">Todas as Empresas</SelectItem>{companies.map(c => <SelectItem key={c.id} value={c.id}>{c.corporateName}</SelectItem>)}</SelectContent>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+            <Popover>
+              <PopoverTrigger asChild><Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{date?.from ? (date.to ? (<>{format(date.from, "LLL dd, y")} - {format(date.to, "LLL dd, y")}</>) : (format(date.from, "LLL dd, y"))) : (<span>Escolha um período</span>)}</Button></PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent>
+            </Popover>
+            {/* --- CORREÇÃO APLICADA AQUI --- */}
+            <Select onValueChange={(value) => setSelectedCompany(value === 'all' ? '' : value)} value={selectedCompany}>
+                <SelectTrigger><SelectValue placeholder="Filtrar por Cliente" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos os Clientes</SelectItem>
+                    {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.corporateName}</SelectItem>)}
+                </SelectContent>
             </Select>
-            <Button className="w-full md:w-auto" disabled><Download className="mr-2 h-4 w-4" />Exportar (Em breve)</Button>
+            {/* --- E AQUI --- */}
+            <Select onValueChange={(value) => setSelectedContract(value === 'all' ? '' : value)} value={selectedContract} disabled={!selectedCompany}>
+                <SelectTrigger><SelectValue placeholder="Filtrar por Contrato" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos os Contratos</SelectItem>
+                    {contracts.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+            </Select>
+            <Button className="w-full" disabled><Download className="mr-2 h-4 w-4" />Exportar (Em breve)</Button>
         </CardContent>
       </Card>
       

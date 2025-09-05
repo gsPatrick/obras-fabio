@@ -11,20 +11,22 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, Download, Loader2 } from "lucide-react"
 
 import api from "../../../lib/api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
 import { Button } from "../../../components/ui/button"
-import { Input } from "../../../components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu"
 import { ConfirmationDialog } from "../components/ConfirmationDialog"
 
-export function DataTable({ columns }) {
+// O DataTable agora também recebe a função de exportação
+export function DataTable({ columns, filters, onExport }) {
   const [data, setData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [sorting, setSorting] = React.useState([])
-  const [columnFilters, setColumnFilters] = React.useState([])
+  
+  // O filtro de texto (columnFilters) é gerenciado pela página principal
+  const { columnFilters, setColumnFilters } = filters;
 
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
   const [solicitationToCancel, setSolicitationToCancel] = React.useState(null);
@@ -32,14 +34,25 @@ export function DataTable({ columns }) {
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/requests');
+      const params = new URLSearchParams();
+      if (filters.companyId) params.append('companyId', filters.companyId);
+      if (filters.contractId) params.append('contractId', filters.contractId);
+      if (filters.date?.from) params.append('startDate', filters.date.from.toISOString());
+      if (filters.date?.to) params.append('endDate', filters.date.to.toISOString());
+      
+      // Adiciona o filtro de texto se existir
+      const protocolFilter = columnFilters.find(f => f.id === 'protocol')?.value;
+      if(protocolFilter) params.append('protocol', protocolFilter);
+
+
+      const response = await api.get('/requests', { params });
       setData(response.data.requests || []);
     } catch (error) {
       toast.error("Falha ao carregar a lista de solicitações.");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [filters, columnFilters]); 
 
   React.useEffect(() => {
     fetchData();
@@ -53,12 +66,11 @@ export function DataTable({ columns }) {
   const handleConfirmCancel = async () => {
     if (!solicitationToCancel) return;
     try {
-      // A API espera um motivo (reason) no corpo da requisição
       await api.post(`/requests/${solicitationToCancel.id}/request-cancellation`, {
         reason: "Cancelamento solicitado pelo usuário via interface."
       });
       toast.success(`Solicitação de cancelamento para o protocolo ${solicitationToCancel.protocol} foi enviada.`);
-      fetchData(); // Recarrega os dados para mostrar o novo status
+      fetchData();
     } catch (error) {
       toast.error(error.response?.data?.error || "Falha ao solicitar o cancelamento.");
     } finally {
@@ -74,26 +86,19 @@ export function DataTable({ columns }) {
       cell: ({ row }) => (
         <div className="text-right">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menu</span><MoreHorizontal className="h-4 w-4" /></Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><span className="sr-only">Abrir menu</span><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações</DropdownMenuLabel>
-              <Link href={`/solicitacoes/${row.original.id}`}>
-                <DropdownMenuItem>Ver Detalhes e Histórico</DropdownMenuItem>
-              </Link>
-              {/* Lógica para mostrar o botão apenas se o status permitir */}
-              {!['CANCELADO', 'ADMITIDO', 'REPROVADO_PELA_GESTAO'].includes(row.original.status) && (
-                <DropdownMenuItem onClick={() => handleRequestCancel(row.original)}>
-                  Solicitar Cancelamento
-                </DropdownMenuItem>
+              <Link href={`/solicitacoes/${row.original.id}`}><DropdownMenuItem>Ver Detalhes e Histórico</DropdownMenuItem></Link>
+              {!['CANCELADO', 'ADMITIDO', 'REPROVADO_PELA_GESTAO', 'DESLIGAMENTO_CONCLUIDO'].includes(row.original.status) && (
+                <DropdownMenuItem onClick={() => handleRequestCancel(row.original)}>Solicitar Cancelamento</DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       )
     }
-  ], [columns]);
+  ], [columns, fetchData]);
 
   const table = useReactTable({
     data,
@@ -105,22 +110,12 @@ export function DataTable({ columns }) {
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     state: { sorting, columnFilters },
+    manualFiltering: true, // Indica que a filtragem é feita no servidor
   })
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
-        <Input
-          placeholder="Filtrar por candidato..."
-          value={(table.getColumn("candidateName")?.getFilterValue()) ?? ""}
-          onChange={(event) => table.getColumn("candidateName")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
-        />
-        <Link href="/solicitacoes/nova">
-          <Button><PlusCircle className="mr-2 h-4 w-4" />Nova Solicitação</Button>
-        </Link>
-      </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border mt-4">
         <Table>
           <TableHeader>{table.getHeaderGroups().map((headerGroup) => (<TableRow key={headerGroup.id}>{headerGroup.headers.map((header) => (<TableHead key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
           <TableBody>
@@ -129,7 +124,7 @@ export function DataTable({ columns }) {
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (<TableRow key={row.id}>{row.getVisibleCells().map((cell) => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>))
             ) : (
-              <TableRow><TableCell colSpan={tableColumns.length} className="h-24 text-center">Nenhuma solicitação encontrada.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={tableColumns.length} className="h-24 text-center">Nenhuma solicitação encontrada para os filtros aplicados.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>

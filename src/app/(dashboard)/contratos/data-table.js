@@ -4,7 +4,7 @@ import * as React from "react"
 import { toast } from "sonner";
 import Link from "next/link";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react"
 
 import api from "../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
@@ -17,6 +17,7 @@ import { ConfirmationDialog } from "../components/ConfirmationDialog"
 export function DataTable({ columns, filterValue }) {
     const [data, setData] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isExporting, setIsExporting] = React.useState(false);
     const [sorting, setSorting] = React.useState([])
     const [columnFilters, setColumnFilters] = React.useState([])
     const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false)
@@ -29,10 +30,21 @@ export function DataTable({ columns, filterValue }) {
       try {
         const params = new URLSearchParams();
         if (filterValue) {
-          params.append('companyName', filterValue);
+          // A API não suporta filtro por nome de cliente diretamente,
+          // então essa lógica filtraria os dados após recebê-los.
+          // Por enquanto, a API não está sendo filtrada por este valor.
         }
         const response = await api.get('/contracts', { params });
-        setData(response.data.contracts || []);
+        let contractsData = response.data.contracts || [];
+
+        // Filtro manual no frontend se filterValue for fornecido
+        if (filterValue) {
+            contractsData = contractsData.filter(
+                contract => contract.company?.corporateName.toLowerCase().includes(filterValue.toLowerCase())
+            );
+        }
+
+        setData(contractsData);
       } catch (error) {
         toast.error("Falha ao carregar a lista de contratos.");
       } finally {
@@ -77,8 +89,38 @@ export function DataTable({ columns, filterValue }) {
             fetchData();
             return true;
         } catch (error) {
-            toast.error(error.response?.data?.message || "Erro ao salvar contrato.");
+            toast.error(error.response?.data?.error || "Erro ao salvar contrato.");
             return false;
+        }
+    };
+    
+    const handleExport = async () => {
+        setIsExporting(true);
+        toast.info("A exportação foi iniciada. Aguarde...");
+        try {
+            const clientFilter = columnFilters.find(f => f.id === 'client')?.value || '';
+            const params = new URLSearchParams({ name: clientFilter });
+
+            const response = await api.get('/contracts/export', {
+                params,
+                responseType: 'blob',
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            const filename = `contratos-${new Date().toISOString().slice(0, 10)}.xlsx`;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            toast.success("Download do arquivo de contratos concluído!");
+
+        } catch (error) {
+            toast.error("Falha ao exportar os dados de contratos.");
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -119,14 +161,20 @@ export function DataTable({ columns, filterValue }) {
 
     return (
         <div>
-            <div className="flex items-center justify-between py-4">
+            <div className="flex items-center justify-between py-4 gap-4">
                 <Input
                     placeholder="Filtrar por cliente..."
                     value={(table.getColumn("client")?.getFilterValue()) ?? ""}
                     onChange={(event) => table.getColumn("client")?.setFilterValue(event.target.value)}
                     className="max-w-sm"
                 />
-                <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Novo Contrato</Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                        {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                        Exportar
+                    </Button>
+                    <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Novo Contrato</Button>
+                </div>
             </div>
             <div className="rounded-md border">
               <Table>

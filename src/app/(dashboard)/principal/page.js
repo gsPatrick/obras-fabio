@@ -4,15 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Users, UserPlus, UserMinus, Activity } from 'lucide-react';
-import api from '../../../lib/api'; // Importando API
+import api from '../../../lib/api'; 
 
-// Importando componentes
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Skeleton } from '../../../components/ui/skeleton';
-import { DepartmentChart } from './components/department-chart'; // Importando o novo gráfico
+import { DepartmentChart } from './components/department-chart';
 
-// O componente de Skeleton permanece o mesmo
 function DashboardSkeleton() {
   return (
     <>
@@ -74,7 +72,6 @@ function DashboardSkeleton() {
   );
 }
 
-// Componente principal do Dashboard
 export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -105,7 +102,6 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  // Mapeamento de ícones para os cards de estatísticas
   const iconMap = {
     totalCollaborators: Users,
     newAdmissions: UserPlus,
@@ -119,7 +115,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      {/* Cabeçalho do Dashboard */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Visão Geral</h1>
@@ -127,15 +122,14 @@ export default function DashboardPage() {
             Métricas e atividades recentes da sua equipe.
           </p>
         </div>
-        <Link href="/solicitacoes/nova/admissao">
+        <Link href="/solicitacoes/nova">
           <Button>
             <UserPlus className="mr-2 h-4 w-4" />
-            Nova Admissão
+            Nova Solicitação
           </Button>
         </Link>
       </div>
 
-      {/* Grid de Cards de Métricas */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mt-6">
         {stats?.cards?.map((card) => {
           const Icon = iconMap[card.key] || Activity;
@@ -154,7 +148,6 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Seção de Atividades Recentes e Gráficos */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-6">
         <Card className="col-span-full lg:col-span-4">
           <CardHeader>
@@ -187,9 +180,9 @@ export default function DashboardPage() {
 
         <Card className="col-span-full lg:col-span-3">
             <CardHeader>
-                <CardTitle>Distribuição por Departamento</CardTitle>
+                <CardTitle>Distribuição por Categoria</CardTitle>
                 <CardDescription>
-                    Visualização da quantidade de colaboradores por setor.
+                    Visualização da quantidade de colaboradores por categoria.
                 </CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-center h-full min-h-[150px]">

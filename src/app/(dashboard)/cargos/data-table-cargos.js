@@ -31,7 +31,7 @@ export function DataTableCargos({ columns }) {
       const response = await api.get('/positions');
       setData(response.data.positions || []);
     } catch (error) {
-      toast.error("Falha ao carregar a lista de cargos.");
+      toast.error("Falha ao carregar a lista de categorias.");
     } finally {
       setIsLoading(false);
     }
@@ -60,10 +60,10 @@ export function DataTableCargos({ columns }) {
     if (!positionToDelete) return;
     try {
         await api.delete(`/positions/${positionToDelete.id}`);
-        toast.success(`Cargo "${positionToDelete.name}" excluído com sucesso!`);
+        toast.success(`Categoria "${positionToDelete.name}" excluída com sucesso!`);
         fetchData();
     } catch (error) {
-        toast.error("Falha ao excluir o cargo.");
+        toast.error("Falha ao excluir a categoria.");
     } finally {
         setIsDeleteDialogOpen(false);
         setPositionToDelete(null);
@@ -74,15 +74,15 @@ export function DataTableCargos({ columns }) {
     try {
         if (editingData?.id) {
             await api.put(`/positions/${editingData.id}`, formData);
-            toast.success("Cargo atualizado com sucesso!");
+            toast.success("Categoria atualizada com sucesso!");
         } else {
             await api.post('/positions', formData);
-            toast.success("Cargo criado com sucesso!");
+            toast.success("Categoria criada com sucesso!");
         }
         fetchData();
         return true;
     } catch (error) {
-        toast.error(error.response?.data?.message || "Erro ao salvar cargo.");
+        toast.error(error.response?.data?.message || "Erro ao salvar categoria.");
         return false;
     }
   };
@@ -124,14 +124,14 @@ export function DataTableCargos({ columns }) {
     <div>
       <div className="flex items-center justify-between py-4">
         <Input
-          placeholder="Filtrar por cargo..."
+          placeholder="Filtrar por categoria..."
           value={(table.getColumn("name")?.getFilterValue()) ?? ""}
           onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
         <Button onClick={handleCreate}>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Novo Cargo
+          Nova Categoria
         </Button>
       </div>
       <div className="rounded-md border">
@@ -143,7 +143,7 @@ export function DataTableCargos({ columns }) {
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (<TableRow key={row.id}>{row.getVisibleCells().map((cell) => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>))
             ) : (
-              <TableRow><TableCell colSpan={tableColumns.length} className="h-24 text-center">Nenhum cargo encontrado.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={tableColumns.length} className="h-24 text-center">Nenhuma categoria encontrada.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
@@ -154,7 +154,7 @@ export function DataTableCargos({ columns }) {
       </div>
 
       <FormDialogCargos open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen} initialData={editingData} onSave={handleSave}/>
-      <ConfirmationDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} title="Confirmar Exclusão" description={`Tem certeza que deseja excluir o cargo "${positionToDelete?.name}"?`} onConfirm={handleConfirmDelete} confirmText="Sim, Excluir"/>
+      <ConfirmationDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} title="Confirmar Exclusão" description={`Tem certeza que deseja excluir a categoria "${positionToDelete?.name}"?`} onConfirm={handleConfirmDelete} confirmText="Sim, Excluir"/>
     </div>
   )
 }
