@@ -1,12 +1,12 @@
-"use client" // Necessário para usar hooks
+"use client"
 
 import Link from 'next/link';
 import { UserPlus, UserMinus, Repeat } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
-import { useAuth } from '../../../../hooks/useAuth'; // Importando nosso hook de autenticação
+import { useAuth } from '../../../../hooks/useAuth';
 import { Skeleton } from '../../../../components/ui/skeleton';
 
-// --- AJUSTE DE PERMISSÃO APLICADO AQUI ---
+// A configuração de acesso por perfil já está correta aqui
 const requestTypes = [
   {
     href: "/solicitacoes/nova/admissao",
@@ -20,21 +20,20 @@ const requestTypes = [
     title: "Desligamento",
     description: "Formalizar o desligamento de um colaborador.",
     icon: UserMinus,
-    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'], // Adicionado SOLICITANTE
+    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'],
   },
   {
     href: "/solicitacoes/nova/substituicao",
     title: "Substituição",
     description: "Solicitar a substituição de um colaborador existente.",
     icon: Repeat,
-    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'], // Adicionado SOLICITANTE
+    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'],
   },
 ];
 
 export default function NovaSolicitacaoPage() {
-  const { user } = useAuth(); // Pega as informações do usuário logado
+  const { user } = useAuth();
 
-  // Se o usuário ainda não foi carregado, exibe um skeleton
   if (!user) {
     return (
         <div className="container mx-auto py-2">
@@ -51,7 +50,7 @@ export default function NovaSolicitacaoPage() {
     );
   }
 
-  // Filtra os tipos de solicitação que o usuário atual tem permissão para ver
+  // A lógica de filtragem garante que cada perfil veja apenas as opções permitidas
   const availableRequestTypes = requestTypes.filter(type => type.profiles.includes(user.profile));
 
   return (
@@ -81,7 +80,6 @@ export default function NovaSolicitacaoPage() {
             </Card>
           </Link>
         ))}
-         {/* Adiciona uma mensagem caso nenhum tipo esteja disponível */}
         {availableRequestTypes.length === 0 && (
             <p className="col-span-full text-center text-muted-foreground">
                 Nenhum tipo de solicitação disponível para o seu perfil.
