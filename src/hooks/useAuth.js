@@ -1,4 +1,4 @@
-"use client"
+"use client"; // <-- Adicionando a diretiva "use client"
 import { useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
@@ -13,6 +13,7 @@ export function useAuth() {
         setAuth({ user: decodedUser, token });
       } catch (error) {
         console.error("Invalid token:", error);
+        localStorage.removeItem('authToken'); // Limpa token inválido
         setAuth({ user: null, token: null });
       }
     }

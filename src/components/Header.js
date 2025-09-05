@@ -1,21 +1,30 @@
-import Link from 'next/link';
-import { Menu, Building2, User } from 'lucide-react';
+"use client";
 
-import { Button } from '../components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
+import { useRouter } from 'next/navigation';
+import { Menu, Building2, User, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
+
+import { Button } from './ui/button';
+import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+} from './ui/dropdown-menu';
+import { Avatar, AvatarFallback } from './ui/avatar';
 import { NavLinks } from './NavLinks';
 import { NotificationBell } from './NotificationBell';
 
 export function Header() {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    toast.success('Você saiu com segurança!');
+    router.push('/login');
+  };
+
   return (
     <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
       <Sheet>
@@ -34,30 +43,22 @@ export function Header() {
         </SheetContent>
       </Sheet>
 
-      <div className="w-full flex-1">
-        {/* Futuramente podemos colocar Breadcrumbs ou um campo de busca global aqui */}
-      </div>
+      <div className="w-full flex-1"></div>
 
       <div className="flex items-center gap-4">
         <NotificationBell />
-
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full">
-              <Avatar>
-                <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-                <AvatarFallback><User /></AvatarFallback>
-              </Avatar>
+              <Avatar><AvatarFallback><User /></AvatarFallback></Avatar>
               <span className="sr-only">Abrir menu do usuário</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Configurações</DropdownMenuItem>
-            <DropdownMenuItem>Suporte</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>Sair</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleLogout} className="text-red-500 cursor-pointer">
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Sair</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

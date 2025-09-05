@@ -11,7 +11,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { MoreHorizontal, Download, Loader2 } from "lucide-react"
+import { MoreHorizontal } from "lucide-react"
 
 import api from "../../../lib/api"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
@@ -19,44 +19,12 @@ import { Button } from "../../../components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "../../../components/ui/dropdown-menu"
 import { ConfirmationDialog } from "../components/ConfirmationDialog"
 
-// O DataTable agora também recebe a função de exportação
-export function DataTable({ columns, filters, onExport }) {
-  const [data, setData] = React.useState([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+// A DataTable agora é um componente mais simples que apenas exibe os dados recebidos
+export function DataTable({ columns, data, isLoading, refetchData }) {
   const [sorting, setSorting] = React.useState([])
-  
-  // O filtro de texto (columnFilters) é gerenciado pela página principal
-  const { columnFilters, setColumnFilters } = filters;
-
+  const [columnFilters, setColumnFilters] = React.useState([])
   const [isCancelDialogOpen, setIsCancelDialogOpen] = React.useState(false);
   const [solicitationToCancel, setSolicitationToCancel] = React.useState(null);
-
-  const fetchData = React.useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (filters.companyId) params.append('companyId', filters.companyId);
-      if (filters.contractId) params.append('contractId', filters.contractId);
-      if (filters.date?.from) params.append('startDate', filters.date.from.toISOString());
-      if (filters.date?.to) params.append('endDate', filters.date.to.toISOString());
-      
-      // Adiciona o filtro de texto se existir
-      const protocolFilter = columnFilters.find(f => f.id === 'protocol')?.value;
-      if(protocolFilter) params.append('protocol', protocolFilter);
-
-
-      const response = await api.get('/requests', { params });
-      setData(response.data.requests || []);
-    } catch (error) {
-      toast.error("Falha ao carregar a lista de solicitações.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters, columnFilters]); 
-
-  React.useEffect(() => {
-    fetchData();
-  }, [fetchData]);
 
   const handleRequestCancel = (solicitation) => {
     setSolicitationToCancel(solicitation);
@@ -70,7 +38,7 @@ export function DataTable({ columns, filters, onExport }) {
         reason: "Cancelamento solicitado pelo usuário via interface."
       });
       toast.success(`Solicitação de cancelamento para o protocolo ${solicitationToCancel.protocol} foi enviada.`);
-      fetchData();
+      refetchData(); // Chama a função de refetch da página pai
     } catch (error) {
       toast.error(error.response?.data?.error || "Falha ao solicitar o cancelamento.");
     } finally {
@@ -98,7 +66,7 @@ export function DataTable({ columns, filters, onExport }) {
         </div>
       )
     }
-  ], [columns, fetchData]);
+  ], [columns, refetchData]);
 
   const table = useReactTable({
     data,
@@ -110,7 +78,6 @@ export function DataTable({ columns, filters, onExport }) {
     onColumnFiltersChange: setColumnFilters,
     getFilteredRowModel: getFilteredRowModel(),
     state: { sorting, columnFilters },
-    manualFiltering: true, // Indica que a filtragem é feita no servidor
   })
 
   return (
