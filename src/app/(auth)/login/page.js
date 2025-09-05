@@ -5,9 +5,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
-import api from '../../../lib/api'; // Importando a instância do Axios
+import { jwtDecode } from 'jwt-decode'; // <-- IMPORTAÇÃO NECESSÁRIA
+import api from '../../../lib/api';
 
-// Caminhos relativos para os componentes Shadcn
 import { Button } from '../../../components/ui/button';
 import {
   Card,
@@ -28,7 +28,6 @@ import {
 } from '../../../components/ui/tooltip';
 
 
-// Skeleton atualizado para refletir o novo layout com a logo
 function LoginSkeleton() {
   return (
     <Card className="w-full max-w-sm border-none shadow-lg bg-card">
@@ -56,13 +55,11 @@ function LoginSkeleton() {
   );
 }
 
-// Componente principal da página de login atualizado
 export default function LoginPage() {
   const [isPageLoading, setIsPageLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Estados para o formulário
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -70,7 +67,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsPageLoading(false), 1000); // Reduzido o tempo de skeleton
+    const timer = setTimeout(() => setIsPageLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -80,25 +77,27 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Usando a instância do 'api' para fazer a requisição
       const response = await api.post('/auth/login', {
         email,
         password,
       });
 
-      // Assumindo que a API retorna um token no sucesso
       const { token } = response.data;
-      
-      // Salva o token (ex: no localStorage) e redireciona
       localStorage.setItem('authToken', token);
       
       toast.success('Login realizado com sucesso!');
       
-      // Redireciona para a página principal do dashboard
-      router.push('/principal');
+      // --- LÓGICA DE REDIRECIONAMENTO CONDICIONAL ---
+      const decodedUser = jwtDecode(token);
+      if (decodedUser.profile === 'SOLICITANTE') {
+        router.push('/solicitacoes'); // <-- Redireciona SOLICITANTE para a página de solicitações
+      } else {
+        router.push('/principal'); // <-- Mantém o redirecionamento padrão para os outros perfis
+      }
+      // ---------------------------------------------
 
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Erro ao tentar fazer login. Verifique suas credenciais.';
+      const errorMessage = err.response?.data?.error || 'Erro ao tentar fazer login. Verifique suas credenciais.';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -113,14 +112,13 @@ export default function LoginPage() {
   return (
     <Card className="w-full max-w-sm border-none shadow-lg bg-card">
       <CardHeader className="text-center p-6">
-        {/* Logo centralizada */}
         <div className="flex justify-center mb-4">
           <Image
-            src="/logo.png" // Caminho a partir da pasta /public
+            src="/logo.png"
             alt="SAGEPE Logo"
             width={150}
             height={50}
-            priority // Otimiza o carregamento da logo
+            priority
           />
         </div>
         <CardDescription className="text-muted-foreground">
@@ -144,13 +142,12 @@ export default function LoginPage() {
             </div>
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="password">Senha</Label>
-              {/* Container para o input e o ícone do olho */}
               <div className="relative">
                 <Input
                   id="password"
-                  type={showPassword ? "text" : "password"} // Muda o tipo do input dinamicamente
+                  type={showPassword ? "text" : "password"}
                   required
-                  className="pr-10 bg-background" // Adiciona padding à direita para não sobrepor o ícone
+                  className="pr-10 bg-background"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -170,7 +167,6 @@ export default function LoginPage() {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                {/* Botão com cores de azul aplicadas diretamente */}
                 <Button
                   type="submit"
                   className="w-full bg-blue-600 text-white hover:bg-blue-700"

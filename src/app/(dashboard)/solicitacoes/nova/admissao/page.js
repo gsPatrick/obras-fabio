@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import api from '../../../../../lib/api';
+import { useAuth } from '../../../../../hooks/useAuth'; // <-- Importa o hook de autenticação
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { Input } from "../../../../../components/ui/input";
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../../../../../components/ui/textarea";
 
 export default function FormAdmissaoPage() {
+  const { user } = useAuth(); // <-- Pega o usuário logado
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const router = useRouter();
@@ -30,21 +32,34 @@ export default function FormAdmissaoPage() {
     candidateName: '', candidateCpf: '', candidatePhone: '', reason: '',
   });
 
+  // --- LÓGICA DE BUSCA DE DADOS TOTALMENTE REFEITA ---
   useEffect(() => {
     const fetchInitialData = async () => {
+      if (!user) return; // Aguarda o usuário ser carregado
+      
       setIsDataLoading(true);
       try {
-        const [companiesRes, positionsRes] = await Promise.all([
-          api.get('/companies'),
-          api.get('/positions')
-        ]);
-        setCompanies(companiesRes.data.companies || []);
+        let companiesData = [];
+        // Se for SOLICITANTE, busca apenas as empresas associadas a ele
+        if (user.profile === 'SOLICITANTE') {
+            const response = await api.get(`/associations/users/${user.id}/companies`);
+            companiesData = response.data || [];
+        } else {
+        // Para outros perfis, busca todas as empresas
+            const response = await api.get('/companies');
+            companiesData = response.data.companies || [];
+        }
+        setCompanies(companiesData);
+
+        // Busca todas as categorias (cargos)
+        const positionsRes = await api.get('/positions');
         setPositions(positionsRes.data.positions || []);
+
       } catch (error) { toast.error("Falha ao carregar dados de apoio."); } 
       finally { setIsDataLoading(false); }
     };
     fetchInitialData();
-  }, []);
+  }, [user]); // Depende do usuário para iniciar
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -52,6 +67,7 @@ export default function FormAdmissaoPage() {
         setIsDataLoading(true);
         setContracts([]); handleChange('contractId', '');
         try {
+          // A API de contratos já é filtrada por companyId
           const response = await api.get(`/contracts?companyId=${selectedCompany}`);
           setContracts(response.data.contracts || []);
         } catch (error) { toast.error("Falha ao carregar contratos da empresa."); } 
@@ -136,9 +152,9 @@ export default function FormAdmissaoPage() {
                 </div>
             </div>
             <div className="space-y-2">
-                <Label htmlFor="positionId">Cargo</Label>
+                <Label htmlFor="positionId">Categoria</Label>
                 <Select value={formData.positionId} onValueChange={(value) => handleChange('positionId', value)} disabled={isDataLoading} required>
-                    <SelectTrigger><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
                     <SelectContent>{positions.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                 </Select>
             </div>
