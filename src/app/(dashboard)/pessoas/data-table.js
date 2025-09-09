@@ -39,9 +39,12 @@ export function DataTable({ columns, filterBy, filterValue }) {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
+      params.append('all', 'true'); // <-- CORREÇÃO APLICADA AQUI
+      
       const response = await api.get('/employees', { params });
       let employees = response.data.employees || [];
 
+      // Filtro frontend é mantido, pois a API não tem essa lógica específica
       if (filterBy && filterValue) {
         employees = employees.filter(emp => {
             if (filterBy === 'department') return emp.position?.department?.name === filterValue;
@@ -96,37 +99,28 @@ export function DataTable({ columns, filterBy, filterValue }) {
       return false;
     }
   };
-
+  
   const handleExport = async () => {
     setIsExporting(true);
-    toast.info("A exportação foi iniciada. Aguarde...");
+    toast.info("A exportação foi iniciada...");
     try {
-        const nameFilter = columnFilters.find(f => f.id === 'name')?.value || '';
-        const params = new URLSearchParams({ name: nameFilter });
-        
-        const response = await api.get('/employees/export', {
-            params,
-            responseType: 'blob',
-        });
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        const filename = `pessoas-${new Date().toISOString().slice(0, 10)}.xlsx`;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-        toast.success("Download do arquivo de pessoas concluído!");
-
+      const nameFilter = columnFilters.find(f => f.id === 'name')?.value || '';
+      const params = new URLSearchParams({ name: nameFilter });
+      const response = await api.get('/employees/export', { params, responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `pessoas-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Download concluído!");
     } catch (error) {
-        toast.error("Falha ao exportar os dados.");
+      toast.error("Falha ao exportar dados.");
     } finally {
-        setIsExporting(false);
+      setIsExporting(false);
     }
   };
-
 
   const tableColumns = React.useMemo(() => [
     ...columns,
@@ -169,11 +163,11 @@ export function DataTable({ columns, filterBy, filterValue }) {
           className="max-w-sm"
         />
         <div className="flex gap-2">
-            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
-                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
-                Exportar
-            </Button>
-            <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Adicionar Pessoa</Button>
+          <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+            {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+            Exportar
+          </Button>
+          <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Adicionar Pessoa</Button>
         </div>
       </div>
       <div className="rounded-md border">

@@ -37,7 +37,8 @@ export function DataTable({ columns }) {
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/companies');
+      // Adiciona o parâmetro `all=true` para buscar todos os registros
+      const response = await api.get('/companies?all=true');
       setData(response.data.companies || []); 
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
@@ -93,22 +94,17 @@ export function DataTable({ columns }) {
       return true;
     } catch (error) {
       console.error("Erro ao salvar cliente:", error);
-      const errorMessage = error.response?.data?.error || "Erro ao salvar cliente.";
-      toast.error(errorMessage);
+      toast.error(error.response?.data?.error || "Erro ao salvar cliente.");
       return false;
     }
   };
-  
+
   const handleExport = async () => {
     setIsExporting(true);
     toast.info("A exportação foi iniciada. Aguarde...");
     try {
         const tradeNameFilter = columnFilters.find(f => f.id === 'tradeName')?.value || '';
-        const cnpjFilter = columnFilters.find(f => f.id === 'cnpj')?.value || '';
-        const params = new URLSearchParams({ 
-            tradeName: tradeNameFilter,
-            cnpj: cnpjFilter 
-        });
+        const params = new URLSearchParams({ tradeName: tradeNameFilter });
         
         const response = await api.get('/companies/export', {
             params,
@@ -139,7 +135,7 @@ export function DataTable({ columns }) {
       id: "actions",
       cell: ({ row }) => {
         const client = row.original
-        const encodedClientName = encodeURIComponent(client.corporateName)
+        const encodedClientName = encodeURIComponent(client.tradeName)
 
         return (
           <div className="text-right">
@@ -171,7 +167,7 @@ export function DataTable({ columns }) {
         )
       }
     }
-  ], [columns]);
+  ], [columns, fetchData]);
 
   const table = useReactTable({
     data,
@@ -192,10 +188,10 @@ export function DataTable({ columns }) {
     <div>
       <div className="flex items-center justify-between py-4 gap-4">
         <Input
-          placeholder="Filtrar por razão social..."
-          value={(table.getColumn("corporateName")?.getFilterValue()) ?? ""}
+          placeholder="Filtrar por nome fantasia..."
+          value={(table.getColumn("tradeName")?.getFilterValue()) ?? ""}
           onChange={(event) =>
-            table.getColumn("corporateName")?.setFilterValue(event.target.value)
+            table.getColumn("tradeName")?.setFilterValue(event.target.value)
           }
           className="max-w-sm"
         />

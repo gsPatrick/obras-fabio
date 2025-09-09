@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import api from '../../../../../lib/api';
-import { useAuth } from '../../../../../hooks/useAuth'; // <-- Importa o hook de autenticação
+import { useAuth } from '../../../../../hooks/useAuth';
 import { Button } from "../../../../../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { Input } from "../../../../../components/ui/input";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../../../../../components/ui/textarea";
 
 export default function FormAdmissaoPage() {
-  const { user } = useAuth(); // <-- Pega o usuário logado
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const router = useRouter();
@@ -22,58 +22,51 @@ export default function FormAdmissaoPage() {
   const [companies, setCompanies] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [workLocations, setWorkLocations] = useState([]);
-  const [positions, setPositions] = useState([]);
   
   const [selectedCompany, setSelectedCompany] = useState('');
   const [selectedContract, setSelectedContract] = useState('');
 
+  // O campo 'positionId' foi removido do estado inicial
   const [formData, setFormData] = useState({
-    companyId: '', contractId: '', workLocationId: '', positionId: '',
+    companyId: '', contractId: '', workLocationId: '',
     candidateName: '', candidateCpf: '', candidatePhone: '', reason: '',
   });
 
-  // --- LÓGICA DE BUSCA DE DADOS TOTALMENTE REFEITA ---
   useEffect(() => {
     const fetchInitialData = async () => {
-      if (!user) return; // Aguarda o usuário ser carregado
+      if (!user) return;
       
       setIsDataLoading(true);
       try {
         let companiesData = [];
-        // Se for SOLICITANTE, busca apenas as empresas associadas a ele
         if (user.profile === 'SOLICITANTE') {
             const response = await api.get(`/associations/users/${user.id}/companies`);
             companiesData = response.data || [];
         } else {
-        // Para outros perfis, busca todas as empresas
             const response = await api.get('/companies');
             companiesData = response.data.companies || [];
         }
         setCompanies(companiesData);
-
-        // Busca todas as categorias (cargos)
-        const positionsRes = await api.get('/positions');
-        setPositions(positionsRes.data.positions || []);
-
       } catch (error) { toast.error("Falha ao carregar dados de apoio."); } 
       finally { setIsDataLoading(false); }
     };
     fetchInitialData();
-  }, [user]); // Depende do usuário para iniciar
+  }, [user]);
 
   useEffect(() => {
     const fetchContracts = async () => {
       if (selectedCompany) {
         setIsDataLoading(true);
-        setContracts([]); handleChange('contractId', '');
+        setContracts([]); 
+        handleChange('contractId', '');
         try {
-          // A API de contratos já é filtrada por companyId
-          const response = await api.get(`/contracts?companyId=${selectedCompany}`);
+          const response = await api.get(`/contracts?companyId=${selectedCompany}&all=true`);
           setContracts(response.data.contracts || []);
         } catch (error) { toast.error("Falha ao carregar contratos da empresa."); } 
         finally { setIsDataLoading(false); }
       } else {
-        setContracts([]); handleChange('contractId', '');
+        setContracts([]); 
+        handleChange('contractId', '');
       }
     };
     fetchContracts();
@@ -83,14 +76,16 @@ export default function FormAdmissaoPage() {
     const fetchWorkLocations = async () => {
       if (selectedContract) {
         setIsDataLoading(true);
-        setWorkLocations([]); handleChange('workLocationId', '');
+        setWorkLocations([]); 
+        handleChange('workLocationId', '');
         try {
-          const response = await api.get(`/work-locations?contractId=${selectedContract}`);
+          const response = await api.get(`/work-locations?contractId=${selectedContract}&all=true`);
           setWorkLocations(response.data.workLocations || []);
         } catch (error) { toast.error("Falha ao carregar locais de trabalho."); } 
         finally { setIsDataLoading(false); }
       } else {
-        setWorkLocations([]); handleChange('workLocationId', '');
+        setWorkLocations([]); 
+        handleChange('workLocationId', '');
       }
     };
     fetchWorkLocations();
@@ -104,6 +99,7 @@ export default function FormAdmissaoPage() {
     event.preventDefault();
     setIsLoading(true);
     try {
+      // O campo 'positionId' não é mais enviado no payload
       await api.post('/requests/admission', formData);
       toast.success("Solicitação de admissão enviada com sucesso!");
       router.push('/solicitacoes');
@@ -151,13 +147,7 @@ export default function FormAdmissaoPage() {
                     </Select>
                 </div>
             </div>
-            <div className="space-y-2">
-                <Label htmlFor="positionId">Categoria</Label>
-                <Select value={formData.positionId} onValueChange={(value) => handleChange('positionId', value)} disabled={isDataLoading} required>
-                    <SelectTrigger><SelectValue placeholder="Selecione a categoria" /></SelectTrigger>
-                    <SelectContent>{positions.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                </Select>
-            </div>
+            {/* --- CAMPO DE CATEGORIA REMOVIDO DAQUI --- */}
             <div className="space-y-2"><Label htmlFor="reason">Motivo / Justificativa</Label><Textarea id="reason" value={formData.reason} onChange={(e) => handleChange('reason', e.target.value)} required /></div>
             <div className="flex justify-end gap-4 pt-4">
                 <Button variant="outline" type="button" onClick={() => router.push('/solicitacoes/nova')} disabled={isLoading}>Cancelar</Button>

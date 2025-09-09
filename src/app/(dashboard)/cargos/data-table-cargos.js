@@ -3,7 +3,7 @@
 import * as React from "react"
 import { toast } from "sonner";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react"
 
 import api from "../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
@@ -16,6 +16,7 @@ import { ConfirmationDialog } from "../components/ConfirmationDialog"
 export function DataTableCargos({ columns }) {
   const [data, setData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isExporting, setIsExporting] = React.useState(false);
   const [sorting, setSorting] = React.useState([])
   const [columnFilters, setColumnFilters] = React.useState([])
 
@@ -28,7 +29,8 @@ export function DataTableCargos({ columns }) {
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.get('/positions');
+      // Adiciona o parâmetro `all=true` para buscar todos os registros
+      const response = await api.get('/positions?all=true');
       setData(response.data.positions || []);
     } catch (error) {
       toast.error("Falha ao carregar a lista de categorias.");
@@ -63,7 +65,7 @@ export function DataTableCargos({ columns }) {
         toast.success(`Categoria "${positionToDelete.name}" excluída com sucesso!`);
         fetchData();
     } catch (error) {
-        toast.error("Falha ao excluir a categoria.");
+        toast.error(error.response?.data?.error || "Falha ao excluir a categoria.");
     } finally {
         setIsDeleteDialogOpen(false);
         setPositionToDelete(null);
@@ -82,8 +84,30 @@ export function DataTableCargos({ columns }) {
         fetchData();
         return true;
     } catch (error) {
-        toast.error(error.response?.data?.message || "Erro ao salvar categoria.");
+        toast.error(error.response?.data?.error || "Erro ao salvar categoria.");
         return false;
+    }
+  };
+  
+  const handleExport = async () => {
+    setIsExporting(true);
+    toast.info("A exportação foi iniciada...");
+    try {
+        const response = await api.get('/positions/export', { // Assumindo que o endpoint de exportação existe
+            responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `categorias-${new Date().toISOString().slice(0, 10)}.xlsx`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        toast.success("Download concluído!");
+    } catch (error) {
+        toast.error("Falha ao exportar os dados.");
+    } finally {
+        setIsExporting(false);
     }
   };
 
@@ -122,17 +146,23 @@ export function DataTableCargos({ columns }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4">
+      <div className="flex items-center justify-between py-4 gap-4">
         <Input
           placeholder="Filtrar por categoria..."
           value={(table.getColumn("name")?.getFilterValue()) ?? ""}
           onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
           className="max-w-sm"
         />
-        <Button onClick={handleCreate}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nova Categoria
-        </Button>
+        <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                Exportar
+            </Button>
+            <Button onClick={handleCreate}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Nova Categoria
+            </Button>
+        </div>
       </div>
       <div className="rounded-md border">
         <Table>
