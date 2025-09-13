@@ -47,23 +47,25 @@ export function DataTable({ columns }) {
     finally { setIsDeleteDialogOpen(false); setUserToDelete(null); }
   };
 
+// Dentro de data-table.js
+
   const handleSave = async (formData) => {
     try {
       let savedUser;
       if (editingData?.id) {
         const response = await api.put(`/users/${editingData.id}`, formData);
-        savedUser = response.data;
+        savedUser = response.data; // Armazena a resposta da API
         toast.success("Usuário atualizado com sucesso!");
       } else {
         const response = await api.post('/users', formData);
-        savedUser = response.data;
+        savedUser = response.data; // Armazena a resposta da API
         toast.success("Usuário criado com sucesso!");
       }
       fetchData();
-      return savedUser;
+      return savedUser; // <-- MUDANÇA IMPORTANTE: Retorna o usuário salvo
     } catch (error) {
       toast.error(error.response?.data?.error || "Erro ao salvar usuário.");
-      return null;
+      return null; // Retorna nulo em caso de erro
     }
   };
 

@@ -1,12 +1,12 @@
 "use client"
 
 import Link from 'next/link';
-import { UserPlus, UserMinus, Repeat } from 'lucide-react';
+import { UserPlus, UserMinus, Repeat, MapPin } from 'lucide-react'; // 1. Importar o novo ícone
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { useAuth } from '../../../../hooks/useAuth';
 import { Skeleton } from '../../../../components/ui/skeleton';
 
-// A configuração de acesso por perfil já está correta aqui
+// 2. A configuração de acesso por perfil define quais cards cada usuário pode ver.
 const requestTypes = [
   {
     href: "/solicitacoes/nova/admissao",
@@ -29,11 +29,19 @@ const requestTypes = [
     icon: Repeat,
     profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'],
   },
+  { // 3. Adicionar o novo tipo de solicitação ao array de configuração
+    href: "/solicitacoes/nova/troca-de-local",
+    title: "Troca de Local",
+    description: "Solicitar a mudança de local de um colaborador.",
+    icon: MapPin,
+    profiles: ['ADMIN', 'RH', 'GESTAO', 'SOLICITANTE'],
+  },
 ];
 
 export default function NovaSolicitacaoPage() {
   const { user } = useAuth();
 
+  // Exibe um esqueleto de carregamento enquanto o perfil do usuário é verificado
   if (!user) {
     return (
         <div className="container mx-auto py-2">
@@ -50,7 +58,7 @@ export default function NovaSolicitacaoPage() {
     );
   }
 
-  // A lógica de filtragem garante que cada perfil veja apenas as opções permitidas
+  // 4. A lógica de filtragem continua a mesma, agora incluindo o novo tipo
   const availableRequestTypes = requestTypes.filter(type => type.profiles.includes(user.profile));
 
   return (
@@ -64,8 +72,8 @@ export default function NovaSolicitacaoPage() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 max-w-4xl mx-auto">
         {availableRequestTypes.map((type) => (
-          <Link href={type.href} key={type.title}>
-            <Card className="h-full hover:border-primary hover:shadow-lg transition-all">
+          <Link href={type.href} key={type.title} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-lg">
+            <Card className="h-full hover:border-primary hover:shadow-lg transition-all cursor-pointer">
               <CardHeader className="flex flex-row items-center gap-4">
                 <div className="p-3 bg-muted rounded-lg">
                   <type.icon className="h-6 w-6 text-primary" />
@@ -80,10 +88,13 @@ export default function NovaSolicitacaoPage() {
             </Card>
           </Link>
         ))}
+
+        {/* Mensagem exibida caso o perfil do usuário não tenha permissão para criar nenhuma solicitação */}
         {availableRequestTypes.length === 0 && (
-            <p className="col-span-full text-center text-muted-foreground">
-                Nenhum tipo de solicitação disponível para o seu perfil.
-            </p>
+            <div className="col-span-full text-center text-muted-foreground p-8 border-2 border-dashed rounded-lg">
+                <p>Nenhum tipo de solicitação disponível para o seu perfil.</p>
+                <p className="text-sm mt-1">Entre em contato com o administrador do sistema se acreditar que isso é um erro.</p>
+            </div>
         )}
       </div>
     </div>
