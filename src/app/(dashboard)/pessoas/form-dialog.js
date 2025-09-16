@@ -109,7 +109,6 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
                     <Label htmlFor="admissionDate">Data de Admissão</Label>
                     <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.admissionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.admissionDate ? format(formData.admissionDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.admissionDate} onSelect={(date) => handleChange('admissionDate', date)} initialFocus /></PopoverContent></Popover>
                   </div>
-                  <div className="space-y-2"><Label htmlFor="category">Categoria (Opcional)</Label><Input id="category" value={formData.category} onChange={(e) => handleChange('category', e.target.value)} placeholder="Ex: CLT, Estágio"/></div>
               </div>
               <div className="space-y-2">
                   <Label htmlFor="positionId">Cargo</Label>
