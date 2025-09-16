@@ -103,22 +103,18 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
       const basicPayload = { ...formData };
       if (!basicPayload.password) delete basicPayload.password;
       if (!basicPayload.phone) delete basicPayload.phone;
-      const savedUser = await onSave(basicPayload);
-  
-      if (savedUser) {
-        const finalPermissions = userPermissions.filter((p, index, self) => 
-            p.scopeId !== null || 
-            !self.some(other => other.permissionKey === p.permissionKey && other.scopeId !== null)
-        );
 
-        await api.put(`/associations/users/${savedUser.id}/permissions`, { permissions: finalPermissions });
-        toast.success("Usuário e permissões salvos com sucesso!");
-        onOpenChange(false);
-      }
+      const finalPermissions = userPermissions.filter((p, index, self) => 
+          p.scopeId !== null || 
+          !self.some(other => other.permissionKey === p.permissionKey && other.scopeId !== null)
+      );
+      
+      await onSave(basicPayload, finalPermissions);
+      
     } catch (error) {
-      toast.error(error.response?.data?.error || "Ocorreu um erro ao salvar o usuário ou suas permissões.");
+      console.error("Erro ao preparar dados para salvar:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoading(false); 
     }
   };
 
@@ -156,7 +152,6 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
             <DialogDescription>Preencha os dados e defina as permissões de acesso do usuário.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-            {/* CAMPOS BÁSICOS DO USUÁRIO */}
             <div className="space-y-2"><Label htmlFor="name">Nome</Label><Input id="name" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} required /></div>
             <div className="space-y-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} required /></div>
             <div className="space-y-2"><Label htmlFor="phone">Telefone</Label><Input id="phone" value={formData.phone} onChange={(e) => handleChange('phone', e.target.value)} /></div>
@@ -171,9 +166,9 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* --- SEÇÃO DE PERMISSÕES (MOVIDA PARA CIMA E COM DIAGNÓSTICO) --- */}
+            
             <Separator className="my-2" />
+            
             <div className="space-y-2">
               <Label className="text-base font-semibold">Permissões de Acesso</Label>
               {isPermissionsLoading ? <Skeleton className="h-40 w-full"/> : (
@@ -196,14 +191,14 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
                     ))
                   ) : (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Nenhuma permissão encontrada. Verifique se a API está respondendo corretamente em `/api/associations/permissions`.
+                      Nenhuma permissão encontrada.
                     </p>
                   )}
                 </div>
               )}
             </div>
+
             <Separator className="my-2" />
-            {/* --- FIM DA SEÇÃO DE PERMISSÕES --- */}
             
             <div className="space-y-2"><Label htmlFor="password">Senha</Label><Input id="password" type="password" value={formData.password} onChange={(e) => handleChange('password', e.target.value)} placeholder={isEditing ? "Deixe em branco para não alterar" : ""} required={!isEditing} /></div>
             <div className="flex items-center space-x-2 pt-2"><Switch id="isActive" checked={formData.isActive} onCheckedChange={(checked) => handleChange('isActive', checked)} /><Label htmlFor="isActive">Usuário Ativo</Label></div>

@@ -2,7 +2,7 @@
 import * as React from "react"
 import { toast } from "sonner";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react" // Adicionado Download e Loader2
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react"
 import api from "../../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table"
 import { Button } from "../../../../components/ui/button"
@@ -14,11 +14,13 @@ import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 export function DataTable({ columns }) {
   const [data, setData] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isExporting, setIsExporting] = React.useState(false); // Novo estado para exportação
+  const [isExporting, setIsExporting] = React.useState(false);
   const [sorting, setSorting] = React.useState([]);
   const [columnFilters, setColumnFilters] = React.useState([]);
+  
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
   const [editingData, setEditingData] = React.useState(null);
+  
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState(null);
 
@@ -27,15 +29,31 @@ export function DataTable({ columns }) {
     try {
       const response = await api.get('/users');
       setData(response.data.users || []);
-    } catch (error) { toast.error("Falha ao carregar a lista de usuários."); } 
-    finally { setIsLoading(false); }
+    } catch (error) { 
+      toast.error("Falha ao carregar a lista de usuários."); 
+    } finally { 
+      setIsLoading(false); 
+    }
   }, []);
 
-  React.useEffect(() => { fetchData(); }, [fetchData]);
+  React.useEffect(() => { 
+    fetchData(); 
+  }, [fetchData]);
 
-  const handleCreate = () => { setEditingData(null); setIsFormDialogOpen(true); };
-  const handleEdit = (data) => { setEditingData(data); setIsFormDialogOpen(true); };
-  const handleDeleteRequest = (user) => { setUserToDelete(user); setIsDeleteDialogOpen(true); };
+  const handleCreate = () => { 
+    setEditingData(null); 
+    setIsFormDialogOpen(true); 
+  };
+  
+  const handleEdit = (data) => { 
+    setEditingData(data); 
+    setIsFormDialogOpen(true); 
+  };
+
+  const handleDeleteRequest = (user) => { 
+    setUserToDelete(user); 
+    setIsDeleteDialogOpen(true); 
+  };
 
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
@@ -43,33 +61,41 @@ export function DataTable({ columns }) {
       await api.delete(`/users/${userToDelete.id}`);
       toast.success(`Usuário "${userToDelete.name}" desativado com sucesso!`);
       fetchData();
-    } catch (error) { toast.error("Falha ao desativar o usuário."); } 
-    finally { setIsDeleteDialogOpen(false); setUserToDelete(null); }
-  };
-
-// Dentro de data-table.js
-
-  const handleSave = async (formData) => {
-    try {
-      let savedUser;
-      if (editingData?.id) {
-        const response = await api.put(`/users/${editingData.id}`, formData);
-        savedUser = response.data; // Armazena a resposta da API
-        toast.success("Usuário atualizado com sucesso!");
-      } else {
-        const response = await api.post('/users', formData);
-        savedUser = response.data; // Armazena a resposta da API
-        toast.success("Usuário criado com sucesso!");
-      }
-      fetchData();
-      return savedUser; // <-- MUDANÇA IMPORTANTE: Retorna o usuário salvo
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Erro ao salvar usuário.");
-      return null; // Retorna nulo em caso de erro
+    } catch (error) { 
+      toast.error("Falha ao desativar o usuário."); 
+    } finally { 
+      setIsDeleteDialogOpen(false); 
+      setUserToDelete(null); 
     }
   };
 
-  // --- NOVA FUNÇÃO DE EXPORTAÇÃO ---
+  const handleSave = async (basicData, permissionsData) => {
+    try {
+      let savedUser;
+
+      if (editingData?.id) {
+        const response = await api.put(`/users/${editingData.id}`, basicData);
+        savedUser = response.data;
+        toast.success("Usuário atualizado com sucesso!");
+      } else {
+        const response = await api.post('/users', basicData);
+        savedUser = response.data;
+        toast.success("Usuário criado com sucesso!");
+      }
+
+      if (savedUser && savedUser.id) {
+        await api.put(`/associations/users/${savedUser.id}/permissions`, { permissions: permissionsData });
+        toast.success("Permissões do usuário foram salvas.");
+      }
+      
+      setIsFormDialogOpen(false);
+      fetchData();
+
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Ocorreu um erro ao salvar o usuário.");
+    }
+  };
+
   const handleExport = async () => {
     setIsExporting(true);
     toast.info("A exportação foi iniciada. Aguarde...");
@@ -79,7 +105,7 @@ export function DataTable({ columns }) {
         
         const response = await api.get('/users/export', {
             params,
-            responseType: 'blob', // Essencial para receber o arquivo
+            responseType: 'blob',
         });
 
         const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -125,7 +151,9 @@ export function DataTable({ columns }) {
         </Table>
       </div>
       <div className="flex items-center justify-end space-x-2 py-4"><Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>Anterior</Button><Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>Próximo</Button></div>
+      
       <FormDialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen} initialData={editingData} onSave={handleSave} />
+      
       <ConfirmationDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} title="Confirmar Desativação" description={`Tem certeza que deseja desativar o usuário "${userToDelete?.name}"?`} onConfirm={handleConfirmDelete} confirmText="Sim, Desativar" />
     </div>
   )
