@@ -2,28 +2,13 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 
-// Dados mockados para o gráfico
-const data = [
-  { name: "Jan", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Fev", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Mar", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Abr", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Mai", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Jun", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Jul", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Ago", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Set", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Out", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Nov", total: Math.floor(Math.random() * 20) + 5 },
-  { name: "Dez", total: Math.floor(Math.random() * 20) + 5 },
-]
-
-export function OverviewChart() {
+// O componente agora recebe a propriedade 'data'
+export function OverviewChart({ data }) {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <BarChart data={data}>
         <XAxis
-          dataKey="name"
+          dataKey="name" // A API retorna 'name' para o rótulo do eixo X (ex: 'set, 2025')
           stroke="#888888"
           fontSize={12}
           tickLine={false}
@@ -34,13 +19,19 @@ export function OverviewChart() {
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          tickFormatter={(value) => `${value}`}
+          tickFormatter={(value) => `${value}`} // Formata o eixo Y
         />
         <Tooltip
             cursor={{ fill: 'transparent' }}
-            contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)' }}
+            // Estilos para o tooltip se adequar ao tema light/dark
+            contentStyle={{ 
+                backgroundColor: 'hsl(var(--background))', 
+                border: '1px solid hsl(var(--border))',
+                borderRadius: 'var(--radius-md)'
+            }}
         />
-        <Bar dataKey="total" fill="var(--primary)" radius={[4, 4, 0, 0]} />
+        {/* A API retorna 'total' para o valor da barra */}
+        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
