@@ -2,29 +2,28 @@
 
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "../../../components/ui/button"
-import { Checkbox } from "../../../components/ui/checkbox"
+import { Input } from "../../../components/ui/input"
 import { format } from "date-fns"
 
+// Componente auxiliar para o filtro
+const Filter = ({ column, title }) => {
+  const columnFilterValue = column.getFilterValue()
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span>{title}</span>
+      <Input
+        className="max-w-sm h-8"
+        onChange={(e) => column.setFilterValue(e.target.value)}
+        onClick={(e) => e.stopPropagation()} // Impede que o clique no input acione a ordenação
+        placeholder={`Filtrar ${title}...`}
+        value={columnFilterValue ?? ""}
+      />
+    </div>
+  )
+}
+
 export const columns = [
-  {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -32,14 +31,18 @@ export const columns = [
         Nome <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
+    // Adicionamos o filtro diretamente aqui para manter a ordenação
+    filterFn: 'includesString',
   },
   { 
     accessorKey: "cpf",
-    header: "CPF" 
+    header: "CPF" ,
+    filterFn: 'includesString',
   },
   { 
     accessorKey: "registration",
-    header: "Matrícula" 
+    header: "Matrícula",
+    filterFn: 'includesString',
   },
   { 
     accessorKey: "admissionDate",
@@ -47,26 +50,31 @@ export const columns = [
     cell: ({ row }) => {
         const date = row.getValue("admissionDate");
         return date ? format(new Date(date), "dd/MM/yyyy") : "-";
-    }
+    },
+    filterFn: 'includesString',
   },
   { 
     accessorKey: "category",
     header: "Categoria",
     cell: ({ row }) => row.getValue("category") || "-",
+    filterFn: 'includesString',
   },
   { 
     accessorFn: row => row.position?.name,
     id: 'position',
-    header: "Cargo" 
+    header: "Cargo",
+    filterFn: 'includesString',
   },
   { 
     accessorFn: row => row.contract?.name,
     id: 'contract',
-    header: "Contrato" 
+    header: "Contrato",
+    filterFn: 'includesString',
   },
   { 
     accessorFn: row => row.workLocation?.name,
     id: 'workLocation',
-    header: "Local de Trabalho" 
+    header: "Local de Trabalho",
+    filterFn: 'includesString',
   },
 ]

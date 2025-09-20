@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Loader2, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { cn } from '../../../lib/utils';
 import api from '../../../lib/api';
 import { Button } from "../../../components/ui/button";
@@ -115,8 +116,8 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
               <Input id="contractNumber" value={formData.contractNumber} onChange={(e) => handleChange('contractNumber', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label htmlFor="startDate">Data de Início</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.startDate ? format(formData.startDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.startDate} onSelect={(date) => handleChange('startDate', date)} /></PopoverContent></Popover></div>
-              <div className="space-y-2"><Label htmlFor="endDate">Data de Fim</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.endDate ? format(formData.endDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.endDate} onSelect={(date) => handleChange('endDate', date)} /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label htmlFor="startDate">Data de Início</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.startDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.startDate ? format(formData.startDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.startDate} onSelect={(date) => handleChange('startDate', date)} locale={ptBR} /></PopoverContent></Popover></div>
+              <div className="space-y-2"><Label htmlFor="endDate">Data de Fim</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.endDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.endDate ? format(formData.endDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.endDate} onSelect={(date) => handleChange('endDate', date)} locale={ptBR} /></PopoverContent></Popover></div>
             </div>
           </div>
           <DialogFooter>

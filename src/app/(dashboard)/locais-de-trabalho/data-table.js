@@ -2,8 +2,9 @@
 
 import * as React from "react"
 import { toast } from "sonner";
+import * as xlsx from "xlsx";
 import { flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
-import { MoreHorizontal, PlusCircle } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Download, Loader2 } from "lucide-react"
 
 import api from "../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../components/ui/table"
@@ -16,6 +17,7 @@ import { ConfirmationDialog } from "../components/ConfirmationDialog"
 export function DataTable({ columns, filterValue }) {
     const [data, setData] = React.useState([])
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isExporting, setIsExporting] = React.useState(false);
     const [sorting, setSorting] = React.useState([])
     const [columnFilters, setColumnFilters] = React.useState([])
     const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false)
@@ -27,14 +29,11 @@ export function DataTable({ columns, filterValue }) {
       setIsLoading(true);
       try {
         const params = new URLSearchParams();
-        // Adiciona o parâmetro para buscar todos os registros, ignorando a paginação da API
         params.append('all', 'true');
         
         const response = await api.get('/work-locations', { params });
         let workLocations = response.data.workLocations || [];
 
-        // O filtro por `filterValue` (número do contrato) é feito no frontend
-        // pois a API não tem um filtro direto para isso, mas busca todos os dados primeiro.
         if (filterValue) {
           workLocations = workLocations.filter(loc => loc.contract?.contractNumber === filterValue);
         }
@@ -88,6 +87,48 @@ export function DataTable({ columns, filterValue }) {
       }
     };
 
+    const handleExport = () => {
+        setIsExporting(true);
+        toast.info("Preparando a exportação...");
+    
+        const filteredData = table.getFilteredRowModel().rows.map(row => {
+          const original = row.original;
+          return {
+            'Local de Trabalho': original.name,
+            'Contrato': original.contract?.name || '-',
+            'Endereço': original.address || '-',
+          };
+        });
+    
+        if (filteredData.length === 0) {
+          toast.warning("Nenhum dado para exportar com os filtros atuais.");
+          setIsExporting(false);
+          return;
+        }
+    
+        const worksheet = xlsx.utils.json_to_sheet(filteredData);
+    
+        const headers = Object.keys(filteredData[0]);
+        const colWidths = headers.map(header => {
+          let maxLength = header.length;
+          filteredData.forEach(row => {
+            const cellValue = row[header] ? String(row[header]) : '';
+            if (cellValue.length > maxLength) {
+              maxLength = cellValue.length;
+            }
+          });
+          return { wch: maxLength + 2 };
+        });
+        worksheet['!cols'] = colWidths;
+    
+        const workbook = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(workbook, worksheet, 'Locais_de_Trabalho');
+        xlsx.writeFile(workbook, `locais-de-trabalho-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    
+        toast.success("Download iniciado com sucesso!");
+        setIsExporting(false);
+    };
+
     const tableColumns = React.useMemo(() => [
         ...columns,
         {
@@ -120,18 +161,40 @@ export function DataTable({ columns, filterValue }) {
 
     return (
         <div>
-            <div className="flex items-center justify-between py-4">
-                <Input
-                    placeholder="Filtrar por nome do local..."
-                    value={(table.getColumn("name")?.getFilterValue()) ?? ""}
-                    onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-                    className="max-w-sm"
-                />
+            <div className="flex items-center justify-end py-4 gap-2">
+                <Button variant="outline" onClick={handleExport} disabled={isExporting}>
+                    {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
+                    Exportar
+                </Button>
                 <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Novo Local</Button>
             </div>
             <div className="rounded-md border">
                 <Table>
-                    <TableHeader>{table.getHeaderGroups().map((headerGroup) => (<TableRow key={headerGroup.id}>{headerGroup.headers.map((header) => (<TableHead key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
+                    <TableHeader>
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <TableRow key={headerGroup.id}>
+                                {headerGroup.headers.map((header) => (
+                                    <TableHead key={header.id}>
+                                        {header.isPlaceholder ? null : (
+                                            <div>
+                                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                                {header.column.getCanFilter() ? (
+                                                    <div className="mt-2">
+                                                        <Input
+                                                            className="h-8"
+                                                            placeholder={`Filtrar...`}
+                                                            value={(header.column.getFilterValue()) ?? ''}
+                                                            onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                                        />
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        )}
+                                    </TableHead>
+                                ))}
+                            </TableRow>
+                        ))}
+                    </TableHeader>
                     <TableBody>
                     {isLoading ? (
                       <TableRow><TableCell colSpan={tableColumns.length} className="h-24 text-center">Carregando...</TableCell></TableRow>

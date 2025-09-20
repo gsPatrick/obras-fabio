@@ -11,18 +11,21 @@ export const columns = [
         Razão Social <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
+    filterFn: 'includesString',
   },
   {
     accessorKey: "tradeName",
     header: "Nome Fantasia",
+    filterFn: 'includesString',
   },
   {
     accessorKey: "cnpj",
     header: "CNPJ",
+    filterFn: 'includesString',
   },
   {
-    // --- COLUNA ADICIONADA ---
     accessorKey: "address",
     header: "Endereço",
+    filterFn: 'includesString',
   },
 ]

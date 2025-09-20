@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { toast } from "sonner"
+import * as xlsx from "xlsx";
 import {
   flexRender,
   getCoreRowModel,
@@ -37,12 +38,11 @@ export function DataTable({ columns }) {
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      // Adiciona o parâmetro `all=true` para buscar todos os registros
       const response = await api.get('/companies?all=true');
       setData(response.data.companies || []); 
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
-      toast.error("Falha ao carregar a lista de clientes.");
+      toast.error("Falha ao carregar la lista de clientes.");
     } finally {
       setIsLoading(false);
     }
@@ -99,34 +99,45 @@ export function DataTable({ columns }) {
     }
   };
 
-  const handleExport = async () => {
+  const handleExport = () => {
     setIsExporting(true);
-    toast.info("A exportação foi iniciada. Aguarde...");
-    try {
-        const tradeNameFilter = columnFilters.find(f => f.id === 'tradeName')?.value || '';
-        const params = new URLSearchParams({ tradeName: tradeNameFilter });
-        
-        const response = await api.get('/companies/export', {
-            params,
-            responseType: 'blob',
-        });
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        const filename = `clientes-${new Date().toISOString().slice(0, 10)}.xlsx`;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-        toast.success("Download do arquivo de clientes concluído!");
-
-    } catch (error) {
-        toast.error("Falha ao exportar os dados.");
-    } finally {
-        setIsExporting(false);
+    toast.info("Preparando a exportação...");
+    
+    const filteredData = table.getFilteredRowModel().rows.map(row => row.original);
+    
+    if (filteredData.length === 0) {
+      toast.warning("Nenhum dado para exportar com os filtros atuais.");
+      setIsExporting(false);
+      return;
     }
+    
+    const dataToExport = filteredData.map(client => ({
+        'Razão Social': client.corporateName,
+        'Nome Fantasia': client.tradeName || '-',
+        'CNPJ': client.cnpj,
+        'Endereço': client.address || '-',
+    }));
+
+    const worksheet = xlsx.utils.json_to_sheet(dataToExport);
+    const headers = Object.keys(dataToExport[0]);
+    const colWidths = headers.map(header => {
+      let maxLength = header.length;
+      dataToExport.forEach(row => {
+        const cellValue = row[header] ? String(row[header]) : '';
+        if (cellValue.length > maxLength) {
+          maxLength = cellValue.length;
+        }
+      });
+      return { wch: maxLength + 2 };
+    });
+    worksheet['!cols'] = colWidths;
+
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Clientes');
+    xlsx.writeFile(workbook, `clientes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    toast.success("Download iniciado com sucesso!");
+    setIsExporting(false);
   };
   
   const tableColumns = React.useMemo(() => [
@@ -167,7 +178,7 @@ export function DataTable({ columns }) {
         )
       }
     }
-  ], [columns, fetchData]);
+  ], [columns]);
 
   const table = useReactTable({
     data,
@@ -186,16 +197,7 @@ export function DataTable({ columns }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4 gap-4">
-        <Input
-          placeholder="Filtrar por nome fantasia..."
-          value={(table.getColumn("tradeName")?.getFilterValue()) ?? ""}
-          onChange={(event) =>
-            table.getColumn("tradeName")?.setFilterValue(event.target.value)
-          }
-          className="max-w-sm"
-        />
-        <div className="flex gap-2">
+      <div className="flex items-center justify-end py-4 gap-2">
             <Button variant="outline" onClick={handleExport} disabled={isExporting}>
                 {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
                 Exportar
@@ -204,7 +206,6 @@ export function DataTable({ columns }) {
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Novo Cliente
             </Button>
-        </div>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -212,7 +213,23 @@ export function DataTable({ columns }) {
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
+                   <TableHead key={header.id}>
+                        {header.isPlaceholder ? null : (
+                            <div>
+                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                {header.column.getCanFilter() ? (
+                                    <div className="mt-2">
+                                        <Input
+                                            className="h-8"
+                                            placeholder={`Filtrar...`}
+                                            value={(header.column.getFilterValue()) ?? ''}
+                                            onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                        />
+                                    </div>
+                                ) : null}
+                            </div>
+                        )}
+                    </TableHead>
                 ))}
               </TableRow>
             ))}

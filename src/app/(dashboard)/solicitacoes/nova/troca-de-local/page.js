@@ -18,23 +18,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Popover, PopoverTrigger, PopoverContent } from '../../../../../components/ui/popover';
 import { Calendar } from '../../../../../components/ui/calendar';
 import { Separator } from '../../../../../components/ui/separator';
+import { SearchableSelect } from '../components/SearchableSelect'; // <-- MUDANÇA
 
 export default function FormTrocaDeLocalPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const router = useRouter();
 
-  // Listas de dados para os selects
   const [employees, setEmployees] = useState([]);
   const [allWorkLocations, setAllWorkLocations] = useState([]);
   
-  // Lista de locais de trabalho filtrada para o select de destino
   const [availableWorkLocations, setAvailableWorkLocations] = useState([]);
   
-  // Armazena o objeto completo do colaborador selecionado para exibir seus dados
   const [selectedEmployee, setSelectedEmployee] = useState(null);
 
-  // Estado do formulário
   const [formData, setFormData] = useState({ 
       employeeId: '', 
       newWorkLocationId: '', 
@@ -42,14 +39,13 @@ export default function FormTrocaDeLocalPage() {
       suggestedDate: null 
   });
 
-  // Busca os dados iniciais (colaboradores e locais) uma vez quando o componente monta
   useEffect(() => {
     const fetchInitialData = async () => {
       setIsDataLoading(true);
       try {
         const [employeesRes, locationsRes] = await Promise.all([
-          api.get('/employees?all=true'), // Busca todos os colaboradores que o usuário pode ver
-          api.get('/work-locations?all=true') // Busca todos os locais de trabalho
+          api.get('/employees?all=true'),
+          api.get('/work-locations?all=true')
         ]);
         setEmployees(employeesRes.data.employees || []);
         setAllWorkLocations(locationsRes.data.workLocations || []);
@@ -63,22 +59,18 @@ export default function FormTrocaDeLocalPage() {
     fetchInitialData();
   }, []);
 
-  // Função para atualizar o estado do formulário
   const handleChange = (id, value) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  // Lida com a mudança no select de colaborador
   const handleEmployeeChange = (employeeId) => {
     const employee = employees.find(e => e.id === employeeId);
     setSelectedEmployee(employee || null);
     handleChange('employeeId', employeeId);
 
-    // Reseta as seleções dependentes
     handleChange('newWorkLocationId', ''); 
 
     if (employee) {
-      // Validação: Filtra a lista de locais de trabalho para remover o local atual do colaborador
       const availableLocations = allWorkLocations.filter(loc => loc.id !== employee.workLocationId);
       setAvailableWorkLocations(availableLocations);
     } else {
@@ -86,7 +78,6 @@ export default function FormTrocaDeLocalPage() {
     }
   };
 
-  // Lida com a submissão do formulário
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!selectedEmployee) {
@@ -94,7 +85,6 @@ export default function FormTrocaDeLocalPage() {
       return;
     }
 
-    // Validação: Data sugerida não pode ser no passado
     if (formData.suggestedDate && new Date(formData.suggestedDate) < new Date().setHours(0, 0, 0, 0)) {
         toast.error("A data sugerida para a mudança não pode ser uma data passada.");
         return;
@@ -102,24 +92,21 @@ export default function FormTrocaDeLocalPage() {
     
     setIsSubmitting(true);
     try {
-      // Monta o payload final para a API
       const payload = {
         ...formData,
-        // Inclui IDs necessários para a criação da solicitação no backend
         companyId: selectedEmployee.contract.companyId,
         contractId: selectedEmployee.contractId,
-        workLocationId: selectedEmployee.workLocationId, // Local de origem
+        workLocationId: selectedEmployee.workLocationId,
         positionId: selectedEmployee.positionId,
       };
       
-      // Remove a data se não for preenchida
       if (!payload.suggestedDate) {
           delete payload.suggestedDate;
       }
 
       await api.post('/requests/workplace-change', payload);
       toast.success("Solicitação de troca de local enviada com sucesso!");
-      router.push('/solicitacoes'); // Redireciona para a lista de solicitações
+      router.push('/solicitacoes');
     } catch (error) {
       toast.error(error.response?.data?.error || "Ocorreu um erro ao enviar a solicitação.");
       console.error("Erro no submit do formulário:", error);
@@ -127,6 +114,11 @@ export default function FormTrocaDeLocalPage() {
       setIsSubmitting(false);
     }
   };
+
+  const employeeOptions = employees.map(emp => ({
+    value: emp.id,
+    label: `${emp.name} (Matrícula: ${emp.registration})`
+  }));
 
   return (
     <div className="container mx-auto py-2">
@@ -139,16 +131,14 @@ export default function FormTrocaDeLocalPage() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="employeeId" className="font-semibold">Colaborador</Label>
-              <Select onValueChange={handleEmployeeChange} value={formData.employeeId} disabled={isDataLoading} required>
-                <SelectTrigger id="employeeId">
-                  <SelectValue placeholder={isDataLoading ? "Carregando colaboradores..." : "Selecione um colaborador"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id}>{emp.name} (Matrícula: {emp.registration})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SearchableSelect
+                id="employeeId"
+                options={employeeOptions}
+                value={formData.employeeId}
+                onChange={handleEmployeeChange}
+                placeholder={isDataLoading ? "Carregando..." : "Selecione um colaborador"}
+                disabled={isDataLoading}
+              />
             </div>
             
             {selectedEmployee && (
@@ -190,7 +180,7 @@ export default function FormTrocaDeLocalPage() {
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={formData.suggestedDate} onSelect={(date) => handleChange('suggestedDate', date)} initialFocus />
+                        <Calendar mode="single" selected={formData.suggestedDate} onSelect={(date) => handleChange('suggestedDate', date)} initialFocus locale={ptBR} />
                     </PopoverContent>
                 </Popover>
             </div>

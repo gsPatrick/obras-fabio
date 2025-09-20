@@ -7,7 +7,7 @@ import api from "../../../../lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../components/ui/table"
 import { Button } from "../../../../components/ui/button"
 import { Input } from "../../../../components/ui/input"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../../../components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "../../../../components/ui/dropdown-menu"
 import { FormDialog } from "./form-dialog"
 import { ConfirmationDialog } from "../../components/ConfirmationDialog";
 
@@ -21,6 +21,11 @@ export function DataTable({ columns }) {
   const [isFormDialogOpen, setIsFormDialogOpen] = React.useState(false);
   const [editingData, setEditingData] = React.useState(null);
   
+  // Estados para o diálogo de DESATIVAR
+  const [isDeactivateDialogOpen, setIsDeactivateDialogOpen] = React.useState(false);
+  const [userToDeactivate, setUserToDeactivate] = React.useState(null);
+
+  // --- NOVOS ESTADOS PARA O DIÁLOGO DE EXCLUIR PERMANENTEMENTE ---
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
   const [userToDelete, setUserToDelete] = React.useState(null);
 
@@ -50,29 +55,51 @@ export function DataTable({ columns }) {
     setIsFormDialogOpen(true); 
   };
 
-  const handleDeleteRequest = (user) => { 
-    setUserToDelete(user); 
-    setIsDeleteDialogOpen(true); 
+  // Funções para DESATIVAR
+  const handleDeactivateRequest = (user) => { 
+    setUserToDeactivate(user); 
+    setIsDeactivateDialogOpen(true); 
+  };
+
+  const handleConfirmDeactivate = async () => {
+    if (!userToDeactivate) return;
+    try {
+      await api.delete(`/users/${userToDeactivate.id}`);
+      toast.success(`Usuário "${userToDeactivate.name}" desativado com sucesso!`);
+      fetchData();
+    } catch (error) { 
+      toast.error("Falha ao desativar o usuário."); 
+    } finally { 
+      setIsDeactivateDialogOpen(false); 
+      setUserToDeactivate(null); 
+    }
+  };
+
+  // --- NOVAS FUNÇÕES PARA EXCLUIR PERMANENTEMENTE ---
+  const handleDeleteRequest = (user) => {
+    setUserToDelete(user);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
     try {
-      await api.delete(`/users/${userToDelete.id}`);
-      toast.success(`Usuário "${userToDelete.name}" desativado com sucesso!`);
+      // Chama a nova rota de exclusão permanente
+      await api.delete(`/users/${userToDelete.id}/permanent`);
+      toast.success(`Usuário "${userToDelete.name}" EXCLUÍDO com sucesso!`);
       fetchData();
-    } catch (error) { 
-      toast.error("Falha ao desativar o usuário."); 
-    } finally { 
-      setIsDeleteDialogOpen(false); 
-      setUserToDelete(null); 
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Falha ao excluir o usuário.");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
     }
   };
+
 
   const handleSave = async (basicData, permissionsData) => {
     try {
       let savedUser;
-
       if (editingData?.id) {
         const response = await api.put(`/users/${editingData.id}`, basicData);
         savedUser = response.data;
@@ -126,7 +153,26 @@ export function DataTable({ columns }) {
     }
   };
 
-  const tableColumns = React.useMemo(() => [ ...columns, { id: "actions", cell: ({ row }) => (<div className="text-right"><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => handleEdit(row.original)}>Editar</DropdownMenuItem><DropdownMenuItem className="text-red-600" onClick={() => handleDeleteRequest(row.original)}>Desativar</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>) }], [columns]);
+  const tableColumns = React.useMemo(() => [ ...columns, { 
+      id: "actions", 
+      cell: ({ row }) => (
+          <div className="text-right">
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4" /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(row.original)}>Editar</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleDeactivateRequest(row.original)}>Desativar</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteRequest(row.original)}>
+                        Excluir Permanentemente
+                      </DropdownMenuItem>
+                  </DropdownMenuContent>
+              </DropdownMenu>
+          </div>
+      )
+  }], [columns]);
 
   const table = useReactTable({ data, columns: tableColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), onSortingChange: setSorting, getSortedRowModel: getSortedRowModel(), onColumnFiltersChange: setColumnFilters, getFilteredRowModel: getFilteredRowModel(), state: { sorting, columnFilters } });
 
@@ -154,7 +200,17 @@ export function DataTable({ columns }) {
       
       <FormDialog open={isFormDialogOpen} onOpenChange={setIsFormDialogOpen} initialData={editingData} onSave={handleSave} />
       
-      <ConfirmationDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen} title="Confirmar Desativação" description={`Tem certeza que deseja desativar o usuário "${userToDelete?.name}"?`} onConfirm={handleConfirmDelete} confirmText="Sim, Desativar" />
+      <ConfirmationDialog open={isDeactivateDialogOpen} onOpenChange={setIsDeactivateDialogOpen} title="Confirmar Desativação" description={`Tem certeza que deseja desativar o usuário "${userToDeactivate?.name}"?`} onConfirm={handleConfirmDeactivate} confirmText="Sim, Desativar" />
+
+      {/* --- NOVO DIÁLOGO DE CONFIRMAÇÃO PARA EXCLUSÃO --- */}
+      <ConfirmationDialog 
+        open={isDeleteDialogOpen} 
+        onOpenChange={setIsDeleteDialogOpen} 
+        title="Confirmar EXCLUSÃO PERMANENTE" 
+        description={`Esta ação é irreversível e irá apagar completamente o usuário "${userToDelete?.name}" do sistema. Deseja continuar?`} 
+        onConfirm={handleConfirmDelete} 
+        confirmText="Sim, Excluir Permanentemente" 
+      />
     </div>
   )
 }

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Input } from "../../../../../components/ui/input";
 import { Label } from "../../../../../components/ui/label";
 import { Textarea } from "../../../../../components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../../components/ui/select";
+import { SearchableSelect } from '../components/SearchableSelect'; // <-- MUDANÇA
 
 export default function FormDesligamentoPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function FormDesligamentoPage() {
         const response = await api.get('/employees'); 
         setEmployees(response.data.employees || []);
       } catch (error) {
-        toast.error("Falha ao carregar a lista de colaboradores.");
+        toast.error("Falha ao carregar la lista de colaboradores.");
       } finally {
         setIsDataLoading(false);
       }
@@ -73,6 +73,11 @@ export default function FormDesligamentoPage() {
     }
   };
 
+  const employeeOptions = employees.map(emp => ({
+    value: emp.id,
+    label: `${emp.name} (${emp.registration})`
+  }));
+
   return (
     <div className="container mx-auto py-2">
       <Card className="max-w-3xl mx-auto">
@@ -85,10 +90,13 @@ export default function FormDesligamentoPage() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="employeeId">Nome do Colaborador</Label>
-                <Select onValueChange={handleEmployeeChange} value={formData.employeeId} disabled={isDataLoading} required>
-                  <SelectTrigger><SelectValue placeholder={isDataLoading ? "Carregando..." : "Selecione um colaborador"} /></SelectTrigger>
-                  <SelectContent>{employees.map(emp => (<SelectItem key={emp.id} value={emp.id}>{emp.name} ({emp.registration})</SelectItem>))}</SelectContent>
-                </Select>
+                <SearchableSelect
+                  options={employeeOptions}
+                  value={formData.employeeId}
+                  onChange={handleEmployeeChange}
+                  placeholder={isDataLoading ? "Carregando..." : "Selecione um colaborador"}
+                  disabled={isDataLoading}
+                />
               </div>
               {selectedEmployee && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 border rounded-md bg-muted/50">

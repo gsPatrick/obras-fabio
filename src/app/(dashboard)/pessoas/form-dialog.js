@@ -1,10 +1,10 @@
-
 "use client"
 
 import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { Loader2, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { cn } from '../../../lib/utils';
 import api from '../../../lib/api';
 import { Button } from "../../../components/ui/button";
@@ -107,7 +107,7 @@ export function FormDialog({ open, onOpenChange, initialData, onSave }) {
               <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="admissionDate">Data de Admissão</Label>
-                    <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.admissionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.admissionDate ? format(formData.admissionDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.admissionDate} onSelect={(date) => handleChange('admissionDate', date)} initialFocus /></PopoverContent></Popover>
+                    <Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !formData.admissionDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{formData.admissionDate ? format(formData.admissionDate, "dd/MM/yyyy") : <span>Selecione</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={formData.admissionDate} onSelect={(date) => handleChange('admissionDate', date)} initialFocus locale={ptBR} /></PopoverContent></Popover>
                   </div>
               </div>
               <div className="space-y-2">

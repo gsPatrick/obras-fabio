@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { toast } from "sonner";
+import * as xlsx from "xlsx";
 import {
   flexRender,
   getCoreRowModel,
@@ -39,12 +40,11 @@ export function DataTable({ columns, filterBy, filterValue }) {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
-      params.append('all', 'true'); // <-- CORREÇÃO APLICADA AQUI
+      params.append('all', 'true');
       
       const response = await api.get('/employees', { params });
       let employees = response.data.employees || [];
 
-      // Filtro frontend é mantido, pois a API não tem essa lógica específica
       if (filterBy && filterValue) {
         employees = employees.filter(emp => {
             if (filterBy === 'department') return emp.position?.department?.name === filterValue;
@@ -64,7 +64,7 @@ export function DataTable({ columns, filterBy, filterValue }) {
   React.useEffect(() => {
     fetchData();
   }, [fetchData]);
-
+  
   const handleCreate = () => { setEditingData(null); setIsFormDialogOpen(true); }
   const handleEdit = (data) => { setEditingData(data); setIsFormDialogOpen(true); }
   const handleDeleteRequest = (person) => { setPersonToDelete(person); setIsDeleteDialogOpen(true); };
@@ -100,27 +100,53 @@ export function DataTable({ columns, filterBy, filterValue }) {
     }
   };
   
-  const handleExport = async () => {
+  const handleExport = () => {
     setIsExporting(true);
-    toast.info("A exportação foi iniciada...");
-    try {
-      const nameFilter = columnFilters.find(f => f.id === 'name')?.value || '';
-      const params = new URLSearchParams({ name: nameFilter });
-      const response = await api.get('/employees/export', { params, responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `pessoas-${new Date().toISOString().slice(0, 10)}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("Download concluído!");
-    } catch (error) {
-      toast.error("Falha ao exportar dados.");
-    } finally {
+    toast.info("Preparando a exportação...");
+
+    const filteredData = table.getFilteredRowModel().rows.map(row => {
+      const original = row.original;
+      return {
+        'Nome': original.name,
+        'CPF': original.cpf,
+        'Matrícula': original.registration,
+        'Data de Admissão': original.admissionDate ? new Date(original.admissionDate).toLocaleDateString('pt-BR') : '-',
+        'Categoria': original.category || '-',
+        'Cargo': original.position?.name || '-',
+        'Contrato': original.contract?.name || '-',
+        'Local de Trabalho': original.workLocation?.name || '-',
+      };
+    });
+
+    if (filteredData.length === 0) {
+      toast.warning("Nenhum dado para exportar com os filtros atuais.");
       setIsExporting(false);
+      return;
     }
+
+    const worksheet = xlsx.utils.json_to_sheet(filteredData);
+
+    const headers = Object.keys(filteredData[0]);
+    const colWidths = headers.map(header => {
+      let maxLength = header.length;
+      filteredData.forEach(row => {
+        const cellValue = row[header] ? String(row[header]) : '';
+        if (cellValue.length > maxLength) {
+          maxLength = cellValue.length;
+        }
+      });
+      return { wch: maxLength + 2 };
+    });
+    worksheet['!cols'] = colWidths;
+
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Pessoas');
+    xlsx.writeFile(workbook, `pessoas-${new Date().toISOString().slice(0, 10)}.xlsx`);
+
+    toast.success("Download iniciado com sucesso!");
+    setIsExporting(false);
   };
+
 
   const tableColumns = React.useMemo(() => [
     ...columns,
@@ -155,24 +181,40 @@ export function DataTable({ columns, filterBy, filterValue }) {
 
   return (
     <div>
-      <div className="flex items-center justify-between py-4 gap-4">
-        <Input
-          placeholder="Filtrar por nome..."
-          value={(table.getColumn("name")?.getFilterValue()) ?? ""}
-          onChange={(event) => table.getColumn("name")?.setFilterValue(event.target.value)}
-          className="max-w-sm"
-        />
-        <div className="flex gap-2">
+      <div className="flex items-center justify-end py-4 gap-2">
           <Button variant="outline" onClick={handleExport} disabled={isExporting}>
             {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4" />}
             Exportar
           </Button>
           <Button onClick={handleCreate}><PlusCircle className="mr-2 h-4 w-4" />Adicionar Pessoa</Button>
-        </div>
       </div>
-      <div className="rounded-md border">
+      <div className="relative w-full overflow-auto rounded-md border">
         <Table>
-          <TableHeader>{table.getHeaderGroups().map((headerGroup) => (<TableRow key={headerGroup.id}>{headerGroup.headers.map((header) => (<TableHead key={header.id}>{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                        <TableHead key={header.id}>
+                            {header.isPlaceholder ? null : (
+                                <div>
+                                    {flexRender(header.column.columnDef.header, header.getContext())}
+                                    {header.column.getCanFilter() ? (
+                                        <div className="mt-2">
+                                            <Input
+                                                className="h-8"
+                                                placeholder={`Filtrar ${header.column.id}...`}
+                                                value={(header.column.getFilterValue()) ?? ''}
+                                                onChange={(e) => header.column.setFilterValue(e.target.value)}
+                                            />
+                                        </div>
+                                    ) : null}
+                                </div>
+                            )}
+                        </TableHead>
+                    ))}
+                </TableRow>
+            ))}
+          </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow><TableCell colSpan={tableColumns.length} className="h-24 text-center">Carregando...</TableCell></TableRow>

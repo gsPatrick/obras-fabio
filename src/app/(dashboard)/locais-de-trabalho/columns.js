@@ -11,16 +11,18 @@ export const columns = [
         Local de Trabalho <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
+    filterFn: 'includesString', // Habilita filtro
   },
   {
-    // Acessa o nome do contrato dentro do objeto aninhado 'contract'
     accessorFn: row => row.contract?.name,
     id: "contract",
     header: "Contrato",
+    filterFn: 'includesString', // Habilita filtro
   },
   {
     accessorKey: "address",
     header: "Endereço",
-    cell: ({ row }) => row.getValue("address") || "-", // Exibe '-' se o endereço for nulo
+    cell: ({ row }) => row.getValue("address") || "-",
+    filterFn: 'includesString', // Habilita filtro
   },
 ]

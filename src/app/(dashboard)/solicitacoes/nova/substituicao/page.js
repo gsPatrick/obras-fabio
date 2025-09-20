@@ -10,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Input } from "../../../../../components/ui/input";
 import { Label } from "../../../../../components/ui/label";
 import { Separator } from "../../../../../components/ui/separator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../../components/ui/select";
 import { Textarea } from '../../../../../components/ui/textarea';
+import { SearchableSelect } from '../components/SearchableSelect'; // <-- MUDANÇA
 
 export default function FormSubstituicaoPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +77,11 @@ export default function FormSubstituicaoPage() {
     }
   };
 
+  const employeeOptions = employees.map(emp => ({
+    value: emp.id,
+    label: `${emp.name} (${emp.registration})`
+  }));
+
   return (
     <div className="container mx-auto py-2">
       <Card className="max-w-3xl mx-auto">
@@ -91,10 +96,13 @@ export default function FormSubstituicaoPage() {
                   <h3 className="text-lg font-medium">Colaborador a ser Substituído</h3>
                   <div className="space-y-2 mt-2">
                       <Label htmlFor="employeeId">Nome do Colaborador</Label>
-                      <Select onValueChange={handleEmployeeChange} value={formData.employeeId} disabled={isDataLoading} required>
-                        <SelectTrigger><SelectValue placeholder={isDataLoading ? "Carregando..." : "Selecione um colaborador"} /></SelectTrigger>
-                        <SelectContent>{employees.map(emp => (<SelectItem key={emp.id} value={emp.id}>{emp.name} ({emp.registration})</SelectItem>))}</SelectContent>
-                      </Select>
+                      <SearchableSelect
+                        options={employeeOptions}
+                        value={formData.employeeId}
+                        onChange={handleEmployeeChange}
+                        placeholder={isDataLoading ? "Carregando..." : "Selecione um colaborador"}
+                        disabled={isDataLoading}
+                      />
                   </div>
               </div>
               <Separator />
