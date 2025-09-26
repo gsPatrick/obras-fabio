@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "SAGEPE",
-  description: "SAGEPE",
+  title: "Obras",
+  description: "Obras",
 };
 
 export default function RootLayout({ children }) {
