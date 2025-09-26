@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
         // 3. Busca os dados do usuário
         const { data: userData } = await api.get('/users/me');
         setUser(userData);
-        router.push('/painel');
+        router.push('/Painel');
       } else {
          throw new Error('Token não recebido do servidor.');
       }
