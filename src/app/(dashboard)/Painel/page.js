@@ -2,17 +2,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, Package, List, ArrowUpRight } from "lucide-react";
-import api from '@/lib/api'; // Nosso cliente Axios
+import { DollarSign, List, Package } from "lucide-react";
+import api from '@/lib/api'; 
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TimeSeriesChart } from '../../../components/dashboard/charts/TimeSeriesChart';
 import { CategoryPieChart } from '../../../components/dashboard/charts/CategoryPieChart';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton'; // Importamos o Skeleton
+import { CategoryBarChart } from '../../../components/dashboard/charts/CategoryBarChart';
+import { Skeleton } from '@/components/ui/skeleton'; 
 import Link from 'next/link';
+import { cn } from '@/lib/utils'; // Importar cn para estilização condicional
 
 // Componente para o estado de carregamento (Skeleton)
 const DashboardSkeleton = () => (
@@ -26,20 +27,14 @@ const DashboardSkeleton = () => (
             <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-24" /></CardContent></Card>
             <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-40" /></CardContent></Card>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        <div className="grid gap-4 lg:grid-cols-12">
+            <Card className="lg:col-span-8"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
             <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
-            <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
         </div>
-        <Card>
-            <CardHeader><Skeleton className="h-6 w-40" /></CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    <div className="flex justify-between"><Skeleton className="h-5 w-20" /><Skeleton className="h-5 w-40" /><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div>
-                    <div className="flex justify-between"><Skeleton className="h-5 w-20" /><Skeleton className="h-5 w-40" /><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div>
-                    <div className="flex justify-between"><Skeleton className="h-5 w-20" /><Skeleton className="h-5 w-40" /><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div>
-                </div>
-            </CardContent>
-        </Card>
+        <div className="grid gap-4 lg:grid-cols-12">
+            <Card className="lg:col-span-6"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
+            <Card className="lg:col-span-6"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
+        </div>
     </div>
 );
 
@@ -114,6 +109,7 @@ export default function DashboardPage() {
         </Tabs>
       </div>
 
+      {/* KPIs - Total de Custos em vermelho */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -121,9 +117,20 @@ export default function DashboardPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {(kpis.totalExpenses || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </div>
+<div
+  className={cn(
+    "text-2xl font-bold",
+    (kpis.totalExpenses || 0) > 0
+      ? "text-red-600 dark:text-red-400"
+      : "text-foreground"
+  )}
+>
+  -{(kpis.totalExpenses || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  })}
+</div>
+
             <p className="text-xs text-muted-foreground">no período selecionado</p>
           </CardContent>
         </Card>
@@ -151,15 +158,19 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      {/* GRÁFICOS PRINCIPAIS - Layout 2/1 */}
+      <div className="grid gap-4 lg:grid-cols-7"> 
         <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Evolução dos Custos</CardTitle>
-            <CardDescription>Análise dos gastos ao longo do período.</CardDescription>
+            <CardTitle>Evolução dos Custos (Série Temporal)</CardTitle>
+            <CardDescription>Análise dos gastos ao longo do período selecionado.</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             {charts.lineChart.data && charts.lineChart.data.length > 0 ? (
-                <TimeSeriesChart data={charts.lineChart.data.map(item => ({ name: item.date, total: item.total }))} />
+                <TimeSeriesChart 
+                    // Passamos o array com objetos que tem a chave 'date' e 'total'
+                    data={charts.lineChart.labels.map((date, index) => ({ date: date, total: charts.lineChart.data[index] }))} 
+                />
             ) : (
                 <EmptyState message="Sem dados de evolução para exibir." />
             )}
@@ -167,8 +178,8 @@ export default function DashboardPage() {
         </Card>
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Custos por Categoria</CardTitle>
-            <CardDescription>Distribuição percentual dos gastos.</CardDescription>
+            <CardTitle>Distribuição de Custos (%)</CardTitle>
+            <CardDescription>Distribuição percentual dos gastos por categoria.</CardDescription>
           </CardHeader>
           <CardContent>
             {charts.pieChart && charts.pieChart.length > 0 ? (
@@ -179,53 +190,61 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+      
+      {/* NOVO GRÁFICO (Top 5) + Tabela Recente - Layout 1/1 */}
+      <div className="grid gap-4 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
+            <CardHeader>
+                <CardTitle>Top 5 Categorias (Acumulado)</CardTitle>
+                <CardDescription>Categorias com o maior volume de gastos no período.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <CategoryBarChart data={charts.pieChart} />
+            </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center">
-            <div className="grid gap-2">
+        <Card className="lg:col-span-3">
+            <CardHeader>
                 <CardTitle>Custos Recentes</CardTitle>
-                <CardDescription>Os últimos custos registrados no período selecionado.</CardDescription>
-            </div>
-            <Button asChild size="sm" className="ml-auto gap-1">
-                <Link href="/expenses">
-                    Ver Todos
-                    <ArrowUpRight className="h-4 w-4" />
-                </Link>
-            </Button>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recentExpenses && recentExpenses.length > 0 ? (
-                recentExpenses.map((expense) => (
-                  <TableRow key={expense.id}>
-                    <TableCell className="font-medium">{new Date(expense.expense_date).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{expense.description}</TableCell>
-                    <TableCell>{expense.category.name}</TableCell>
-                    <TableCell className="text-right">
-                        {parseFloat(expense.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
+                <CardDescription>Os últimos custos registrados no período.</CardDescription>
+                <div className="ml-auto">
+                    <Link href="/expenses" className="text-sm font-medium text-blue-600 hover:underline">
+                        Ver Todos
+                    </Link>
+                </div>
+            </CardHeader>
+            <CardContent>
+            <Table>
+                <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                        Nenhum custo registrado neste período.
-                    </TableCell>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                {recentExpenses && recentExpenses.length > 0 ? (
+                    recentExpenses.map((expense) => (
+                    <TableRow key={expense.id}>
+                        <TableCell className="font-medium">{new Date(expense.expense_date).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell>{expense.description.substring(0, 30)}...</TableCell>
+                        <TableCell className="text-right">
+                            {parseFloat(expense.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                            Nenhum custo registrado neste período.
+                        </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
