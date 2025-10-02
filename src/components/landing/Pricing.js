@@ -2,7 +2,7 @@
 import { Check, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-
+//teste
 const plans = [
   {
     name: "Plano Único", // Renomeado
