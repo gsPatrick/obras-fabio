@@ -6,7 +6,7 @@ import Link from 'next/link';
 const plans = [
   {
     name: "Plano Único", // Renomeado
-    price: "R$ 49,90", // Novo preço para o plano único
+    price: "R$ 39,90", // Novo preço para o plano único
     isMostPopular: true,
     description: "Acesso completo a todas as funcionalidades de monitoramento e gestão de custos.",
     features: [

@@ -11,7 +11,7 @@ import api from '@/lib/api';
 import Link from 'next/link'; 
 
 const pricingPlans = [
-    { name: "Plano Único", price: "R$ 49,90", features: ["Monitoramento Ilimitado", "Múltiplos Perfis", "Suporte VIP"], isMostPopular: true, isRecurrent: true },
+    { name: "Plano Único", price: "R$ 39,90", features: ["Monitoramento Ilimitado", "Múltiplos Perfis", "Suporte VIP"], isMostPopular: true, isRecurrent: true },
 ];
 
 const InfoCard = ({ icon: Icon, title, description }) => (
