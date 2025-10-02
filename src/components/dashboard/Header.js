@@ -1,41 +1,38 @@
-// components/dashboard/Header.js - VERSÃO CORRIGIDA
+// components/dashboard/Header.js - VERSÃO FINAL CORRIGIDA
 'use client';
 
 import Link from "next/link";
 import {
   Home,
   FileText,
-  ClipboardPlus,
-  LayoutGrid,
+  ClipboardPlus, // Despesas
+  LayoutGrid, // Categorias
   Menu,
-  Package2,
+  Package2, // Ícone do Logo, mas será removido da lista de navegação
   Settings,
+  Users, // Convidados
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { ProfileSwitcher } from "./ProfileSwitcher"; 
 
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // Usado no ProfileSwitcher, mas mantido por precaução
 
-// <<< MUDANÇA 1: Lista de navegação idêntica à do Sidebar para consistência >>>
+// Lista de navegação (corrigida para incluir Despesas e Convidados)
 const navItems = [
-    { href: "/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/expenses", icon: ClipboardPlus, label: "Despesas" },
+    { href: "/Painel", icon: Home, label: "Dashboard" },
+    { href: "/expenses", icon: ClipboardPlus, label: "Despesas" }, // CRÍTICO: Adicionado Despesas
     { href: "/reports", icon: FileText, label: "Relatórios" },
     { href: "/categories", icon: LayoutGrid, label: "Categorias" },
-    { href: "/settings", icon: Settings, label: "Configurações" }, // Adicionado aqui
+    { href: "/guests", icon: Users, label: "Convidados" }, // Novo Link
+    { href: "/settings", icon: Settings, label: "Configurações" },
 ];
 
 export function Header() {
-  const { user, logout } = useAuth();
-
-  // Pega as iniciais do email do usuário para o Avatar
-  const getInitials = (email) => {
-    if (!email) return '..';
-    const parts = email.split('@');
-    return parts[0].substring(0, 2).toUpperCase();
-  };
+  const { user } = useAuth();
+  
+  const currentProfileId = typeof window !== 'undefined' ? localStorage.getItem('currentProfileId') : null;
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-white px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 dark:bg-gray-950">
@@ -47,19 +44,19 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="sm:max-w-xs">
-          <nav className="grid gap-6 text-lg font-medium">
-            <Link
-              href="/dashboard"
-              className="group flex h-10 w-10 shrink-0 items-center justify-center gap-2 rounded-full bg-blue-600 text-lg font-semibold text-white md:text-base"
-            >
-              <Package2 className="h-5 w-5 transition-all group-hover:scale-110" />
-              <span className="sr-only">Controle de Obra</span>
-            </Link>
-            {/* O menu mobile agora reflete todos os links corretamente */}
+          <nav className="grid gap-6 text-lg font-medium pt-8"> {/* Removido o Link do Logo e ajustado o padding */}
+            
+            {/* Adiciona o Logo/Título principal no topo do menu */}
+            <div className="flex items-center gap-2 px-2.5 mb-4 border-b pb-4">
+                 <Package2 className="h-5 w-5 text-blue-600" />
+                 <span className="font-semibold text-gray-950 dark:text-gray-50">Controle de Obra</span>
+            </div>
+            
             {navItems.map((item) => (
                 <Link
                     key={item.label}
                     href={item.href}
+                    // Adicionando espaçamento e ícone
                     className="flex items-center gap-4 px-2.5 text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-gray-50"
                 >
                     <item.icon className="h-5 w-5" />
@@ -71,31 +68,11 @@ export function Header() {
       </Sheet>
       
       <div className="relative ml-auto flex-1 md:grow-0">
-        {/* Espaço para um futuro campo de busca, se necessário */}
+        {/* Espaço para busca */}
       </div>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-            <Avatar>
-                {/* O Fallback usa as iniciais do usuário logado */}
-                <AvatarFallback>{user ? getInitials(user.email) : '..'}</AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/settings">Configurações</Link>
-          </DropdownMenuItem>
-          {/* <<< MUDANÇA 2: Removido o item "Suporte" que não tinha função >>> */}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={logout} className="text-red-500 focus:text-red-500 focus:bg-red-500/10">
-            Sair
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* INTEGRAÇÃO DO PROFILE SWITCHER */}
+      {user && currentProfileId && <ProfileSwitcher currentProfileId={currentProfileId} />}
     </header>
   );
 }

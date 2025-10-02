@@ -5,35 +5,21 @@ import Link from 'next/link';
 
 const plans = [
   {
-    name: "Essencial",
-    price: "R$ 97",
-    isMostPopular: false,
-    description: "Ideal para equipes pequenas e obras de menor porte.",
-    features: [
-      "Até 5 usuários",
-      "Lançamentos ilimitados via WhatsApp",
-      "Dashboard de análise",
-      "Relatórios de custos",
-      "Suporte via e-mail",
-    ],
-    cta: "Assinar Plano Essencial",
-    href: "/subscribe?plan=essential" // Link para o checkout
-  },
-  {
-    name: "Profissional",
-    price: "R$ 197",
+    name: "Plano Único", // Renomeado
+    price: "R$ 49,90", // Novo preço para o plano único
     isMostPopular: true,
-    description: "Perfeito para construtoras e gestão de múltiplas obras.",
+    description: "Acesso completo a todas as funcionalidades de monitoramento e gestão de custos.",
     features: [
       "Usuários ilimitados",
+      "Perfis de Obra ilimitados",
       "Lançamentos ilimitados via WhatsApp",
-      "Dashboard avançado com filtros",
-      "Relatórios e exportação (CSV)",
+      "Análise inteligente (IA) de comprovantes",
+      "Dashboard avançado com filtros e metas",
+      "Exportação de dados (XLSX)",
       "Suporte prioritário via WhatsApp",
-      "Gestão de múltiplos projetos (em breve)",
     ],
-    cta: "Assinar Plano Profissional",
-    href: "/subscribe?plan=professional" // Link para o checkout
+    cta: "Assinar e Liberar Acesso",
+    href: "/register" // <<< MUDANÇA: Leva para a página de registro
   },
 ];
 
@@ -44,7 +30,7 @@ const faqs = [
     },
     {
         question: "Como funciona o pagamento?",
-        answer: "O pagamento é feito por assinatura mensal através de cartão de crédito. É um processo seguro e você pode cancelar a qualquer momento, sem burocracia."
+        answer: "O pagamento é feito por assinatura mensal através do Mercado Pago. É um processo seguro e você pode cancelar a qualquer momento, sem burocracia."
     },
     {
         question: "A IA entende qualquer tipo de áudio ou comprovante?",
@@ -64,21 +50,21 @@ export function Pricing() {
         {/* Cabeçalho */}
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-            Um plano transparente para o seu crescimento
+            Acesso completo e transparente
           </h2>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-            Escolha a opção que se encaixa no tamanho da sua operação. Sem taxas escondidas.
+            Libere o poder da Inteligência Artificial na gestão de custos da sua obra.
           </p>
         </div>
 
-        {/* Cards de Preço */}
-        <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:gap-12 max-w-4xl mx-auto">
+        {/* Cards de Preço - Apenas 1 no centro */}
+        <div className="mt-16 grid grid-cols-1 gap-8 max-w-sm mx-auto">
           {plans.map((plan) => (
             <div key={plan.name} className={`relative p-8 rounded-2xl shadow-xl border ${plan.isMostPopular ? 'border-blue-500 bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
               {plan.isMostPopular && (
                 <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center px-4 py-1 rounded-full text-sm font-semibold tracking-wider text-white bg-blue-600">
-                        MAIS POPULAR
+                        PLANO ÚNICO
                     </span>
                 </div>
               )}
@@ -100,8 +86,8 @@ export function Pricing() {
                 ))}
               </ul>
 
-              <Button size="lg" className={`w-full mt-10 ${plan.isMostPopular ? '' : 'bg-gray-800 hover:bg-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300'}`} asChild>
-                {/* O link agora leva para uma futura página de inscrição/checkout */}
+              <Button size="lg" className={`w-full mt-10`} asChild>
+                {/* O link agora leva para a página de registro */}
                 <Link href={plan.href}>{plan.cta} <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
             </div>

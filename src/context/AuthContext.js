@@ -1,9 +1,10 @@
-// context/AuthContext.js - NOVA VERSÃO COMPLETA
-'use client';
+// context/AuthContext.js - VERSÃO COM MÍNIMO DE REDIRECIONAMENTO
+
+"use client";
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import api from '../lib/api';
+import api, { setProfileId } from '../lib/api'; 
 
 const AuthContext = createContext(null);
 
@@ -13,62 +14,91 @@ export function AuthProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Tenta carregar o usuário ao iniciar o app, usando o token do localStorage
     async function loadUserFromToken() {
       const token = localStorage.getItem('authToken');
       if (token) {
         try {
-          const { data } = await api.get('/users/me'); // O interceptor adiciona o token
-          if (data) setUser(data);
+          const { data } = await api.get('/users/me'); 
+          if (data) {
+            setUser(data);
+            
+            // Apenas carrega o profileId da sessão se existir
+            const savedProfileId = localStorage.getItem('currentProfileId');
+            if(savedProfileId) {
+                setProfileId(savedProfileId); 
+            }
+          }
         } catch (error) {
-          // Token inválido ou expirado
+          // Token inválido ou expirado - Limpa a sessão
           localStorage.removeItem('authToken');
+          localStorage.removeItem('currentProfileId');
+          setProfileId(null);
+          setUser(null);
+          // Não redireciona, deixa a página atual resolver.
         }
       }
+      
       setLoading(false);
     }
     loadUserFromToken();
-  }, []);
+  }, []); 
 
   const login = async (email, password) => {
     try {
-      // 1. Faz o login e recebe o token na resposta
       const { data: loginResponse } = await api.post('/auth/login', { email, password });
       
       if (loginResponse.token) {
-        // 2. Salva o token no localStorage
         localStorage.setItem('authToken', loginResponse.token);
-
-        // 3. Busca os dados do usuário
+        
+        // <<< CRÍTICO: CAPTURAR E ARMAZENAR O PROFILE ID RETORNADO PELO LOGIN >>>
+        if (loginResponse.profileId) {
+            localStorage.setItem('currentProfileId', loginResponse.profileId);
+            setProfileId(loginResponse.profileId);
+        }
+        // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        
+        // Faz a requisição de dados do usuário (que agora contém o whatsapp_phone)
         const { data: userData } = await api.get('/users/me');
         setUser(userData);
-        router.push('/Painel');
+        
+        // Regra Especial: Após login, redireciona para a tela de seleção de perfil.
+        router.push('/profiles/select');
+        return;
       } else {
          throw new Error('Token não recebido do servidor.');
       }
 
     } catch (error) {
-      // Limpa qualquer token antigo se o login falhar
       localStorage.removeItem('authToken');
+      localStorage.removeItem('currentProfileId');
+      setProfileId(null);
       throw new Error(error.response?.data?.error || 'Falha no login');
     }
+  };
+  
+  // Função para seleção de perfil
+  const selectProfile = (profileId) => {
+      setProfileId(profileId); // Salva no cliente Axios e localStorage
+      router.push('/Painel'); // Redireciona para o Dashboard
   };
 
   const logout = async () => {
     try {
-        await api.post('/auth/logout'); // Opcional, apenas para invalidar no backend se houver lógica para isso
+        await api.post('/auth/logout'); 
     } catch (error) {
         console.error("Erro no endpoint de logout, mas prosseguindo com o logout no cliente.", error);
     } finally {
-        // 4. Remove o token e reseta o estado do usuário
         localStorage.removeItem('authToken');
+        localStorage.removeItem('currentProfileId');
+        setProfileId(null); 
         setUser(null);
+        // Regra Especial: Redireciona para a tela de login.
         router.push('/login');
     }
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated: !!user, user, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated: !!user, user, login, selectProfile, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -4,7 +4,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar as CalendarIcon, Download } from "lucide-react";
 import { format } from "date-fns";
-import Papa from "papaparse";
+// REMOVIDO: import Papa from "papaparse";
+import * as XLSX from 'xlsx/xlsx.mjs'; // <<< IMPORTAR A BIBLIOTECA XLSX
 import api from '@/lib/api';
 
 import { cn } from "@/lib/utils";
@@ -67,25 +68,57 @@ export default function ReportsPage() {
         fetchInitialData();
     }, [fetchInitialData]);
     
+    // <<< INÍCIO: Nova função de exportação XLSX >>>
     const handleExport = () => {
+        if (expenses.length === 0) return;
+
+        // 1. Prepara os dados da tabela
         const dataToExport = expenses.map(exp => ({
-            Data: format(new Date(exp.expense_date), "yyyy-MM-dd"),
+            Data: format(new Date(exp.expense_date), "dd/MM/yyyy"), // Formato DD/MM/YYYY
             Descrição: exp.description,
-            Categoria: exp.category.name,
-            Valor: parseFloat(exp.value).toFixed(2)
+            Categoria: exp.category?.name || 'N/A',
+            Valor: parseFloat(exp.value) // Manter como número para cálculo no Excel
         }));
 
-        const csv = Papa.unparse(dataToExport);
-        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); // Adiciona BOM para Excel
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `relatorio_custos_${format(new Date(), "yyyy-MM-dd")}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 2. Calcula o total geral
+        const totalGeral = expenses.reduce((sum, exp) => sum + parseFloat(exp.value), 0);
+
+        // 3. Converte os dados da tabela para a planilha (Worksheet)
+        const ws = XLSX.utils.json_to_sheet(dataToExport);
+
+        // 4. Adiciona a linha de Total Geral (Ex: na próxima linha após os dados)
+        // A próxima linha é a linha inicial dos dados (linha 2) + o número de despesas.
+        const nextRow = expenses.length + 2; 
+
+        // Define a célula do rótulo "Total Geral" (Coluna A, linha N)
+        XLSX.utils.sheet_add_aoa(ws, [["TOTAL GERAL:"]], { origin: `A${nextRow}` });
+        
+        // Define a célula do valor total (Coluna D, linha N)
+        XLSX.utils.sheet_add_aoa(ws, [[totalGeral]], { origin: `D${nextRow}` });
+
+        // 5. Aplica formatação de moeda na coluna Valor (D) e na célula do Total Geral (D)
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for (let R = range.s.r + 1; R <= range.e.r; ++R) { // Percorre da 2ª linha até a última linha de dados
+            const cellAddress = XLSX.utils.encode_cell({ r: R, c: 3 }); // Coluna D (índice 3)
+            if (ws[cellAddress]) {
+                ws[cellAddress].z = 'R$#,##0.00'; // Formato de moeda brasileiro
+            }
+        }
+        // Aplica o formato de moeda ao Total Geral
+        const totalCellAddress = `D${nextRow}`;
+        if (ws[totalCellAddress]) {
+            ws[totalCellAddress].z = 'R$#,##0.00';
+            // Opcional: Estilo em negrito para o Total Geral (XLSX.js não é forte em estilos simples)
+        }
+
+        // 6. Cria o Workbook e adiciona a Worksheet
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Despesas Detalhadas");
+
+        // 7. Salva o arquivo como XLSX
+        XLSX.writeFile(wb, `relatorio_despesas_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`);
     };
+    // <<< FIM: Nova função de exportação XLSX >>>
 
     return (
         <div className="space-y-8">
@@ -100,7 +133,7 @@ export default function ReportsPage() {
                         <CardTitle>Filtros de Análise</CardTitle>
                         <Button onClick={handleExport} disabled={expenses.length === 0 || loading}>
                             <Download className="h-4 w-4 mr-2" />
-                            Exportar para Excel (CSV)
+                            Exportar para Excel (XLSX)
                         </Button>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 pt-4">
@@ -155,7 +188,7 @@ export default function ReportsPage() {
                                     <TableRow key={expense.id}>
                                         <TableCell>{format(new Date(expense.expense_date), "dd/MM/yyyy")}</TableCell>
                                         <TableCell className="font-medium">{expense.description}</TableCell>
-                                        <TableCell><Badge variant="outline">{expense.category.name}</Badge></TableCell>
+                                        <TableCell><Badge variant="outline">{expense.category?.name || 'N/A'}</Badge></TableCell>
                                         <TableCell className="text-right">
                                             {parseFloat(expense.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                         </TableCell>

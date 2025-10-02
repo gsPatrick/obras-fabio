@@ -1,23 +1,30 @@
-// components/dashboard/categories/CategoryForm.js
+// components/dashboard/categories/CategoryForm.js (COMPLETAMENTE MODIFICADO)
 'use client';
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"; // Reutilizar Input
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+// REMOVER: { Select, SelectContent, SelectItem, SelectTrigger, SelectValue }
 
 export function CategoryForm({ category, onClose, onSave }) {
     const isEditing = !!category;
     const [isLoading, setIsLoading] = useState(false);
     
+    // Estado do formulário
+    const [name, setName] = useState(category?.name || '');
+    const [type, setType] = useState(category?.type || ''); // Agora é um string livre
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
+        
+        const data = { name, type };
+        
+        // Chamamos o onSave (que é o handler do pai que faz a requisição)
         await onSave(data);
+        
         setIsLoading(false);
     };
 
@@ -39,7 +46,8 @@ export function CategoryForm({ category, onClose, onSave }) {
                             <Input
                                 id="name"
                                 name="name"
-                                defaultValue={category?.name}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
                                 className="col-span-3"
                                 placeholder="Ex: Material Elétrico"
                                 required
@@ -48,17 +56,16 @@ export function CategoryForm({ category, onClose, onSave }) {
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="type" className="text-right">Tipo</Label>
-                            <Select name="type" defaultValue={category?.type} required disabled={isLoading}>
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Selecione um tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Mão de Obra">Mão de Obra</SelectItem>
-                                    <SelectItem value="Material">Material</SelectItem>
-                                    <SelectItem value="Serviços/Equipamentos">Serviços/Equipamentos</SelectItem>
-                                    <SelectItem value="Outros">Outros</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <Input // <<< MUDANÇA: AGORA É UM INPUT DE TEXTO
+                                id="type"
+                                name="type"
+                                value={type}
+                                onChange={(e) => setType(e.target.value)}
+                                className="col-span-3"
+                                placeholder="Ex: Mão de Obra, Freelancer"
+                                required
+                                disabled={isLoading}
+                            />
                         </div>
                     </div>
                 </form>
