@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { ProfileSwitcher } from "./ProfileSwitcher"; 
-
+//agr
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"; // Usado no ProfileSwitcher, mas mantido por precaução
