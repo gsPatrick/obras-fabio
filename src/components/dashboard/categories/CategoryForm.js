@@ -23,6 +23,7 @@ export function CategoryForm({ category, onClose, onSave }) {
         const data = { name, type };
         
         // Chamamos o onSave (que é o handler do pai que faz a requisição)
+        // O pai (CategoriesGoalsStep) é responsável por saber se é PUT ou POST
         await onSave(data);
         
         setIsLoading(false);
@@ -56,7 +57,7 @@ export function CategoryForm({ category, onClose, onSave }) {
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="type" className="text-right">Tipo</Label>
-                            <Input // <<< MUDANÇA: AGORA É UM INPUT DE TEXTO
+                            <Input 
                                 id="type"
                                 name="type"
                                 value={type}
