@@ -251,7 +251,7 @@ export default function OnboardingPage() {
             <CardContent className="space-y-4">
                 <p className="font-semibold">Instruções:</p>
                 <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                    <li>No seu celular, crie um novo grupo no WhatsApp (Ex: "Custos - {profileName}").</li>
+                    <li>No seu celular, crie um novo grupo no WhatsApp (Ex: &quot;Custos - {profileName}&quot;).</li>
                     <li>Adicione o Bot como um participante, usando o número: 
                         <span className="font-bold text-primary ml-1 mr-1">
                             {WHATSAPP_BOT_NUMBER}
