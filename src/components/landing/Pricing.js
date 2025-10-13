@@ -2,44 +2,46 @@
 import { Check, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-//teste
+import { cn } from '@/lib/utils';
+
 const plans = [
   {
-    name: "Plano Único", // Renomeado
-    price: "R$ 39,90", // Novo preço para o plano único
-    isMostPopular: true,
-    description: "Acesso completo a todas as funcionalidades de monitoramento e gestão de custos.",
+    name: "Plano Simples",
+    price: "R$ 39,90",
+    isMostPopular: false,
+    description: "Ideal para gerenciar um único projeto ou obra com total controle.",
     features: [
       "Usuários ilimitados",
-      "Perfis de Obra ilimitados",
+      "1 Perfil de Obra",
       "Lançamentos ilimitados via WhatsApp",
       "Análise inteligente (IA) de comprovantes",
       "Dashboard avançado com filtros e metas",
       "Exportação de dados (XLSX)",
-      "Suporte prioritário via WhatsApp",
     ],
-    cta: "Assinar e Liberar Acesso",
-    href: "/register" // <<< MUDANÇA: Leva para a página de registro
+    cta: "Começar Agora",
+    href: "/register"
+  },
+  {
+    name: "Plano Pro",
+    price: "R$ 69,90",
+    isMostPopular: true,
+    description: "Perfeito para profissionais e empresas que gerenciam múltiplos projetos simultaneamente.",
+    features: [
+      "Todos os benefícios do Plano Simples",
+      "5 Perfis de Obra", // Limite de 5 perfis
+      "Suporte prioritário via WhatsApp",
+      "Acesso a novas funcionalidades antecipadamente",
+    ],
+    cta: "Assinar Plano Pro",
+    href: "/register"
   },
 ];
 
 const faqs = [
-    {
-        question: "Preciso de um aplicativo para usar o sistema?",
-        answer: "Não! A grande vantagem do Obra.AI é que toda a interação da sua equipe de campo é feita diretamente pelo WhatsApp, um aplicativo que todos já usam. O gestor acessa o dashboard completo pelo navegador de qualquer dispositivo."
-    },
-    {
-        question: "Como funciona o pagamento?",
-        answer: "O pagamento é feito por assinatura mensal através do Mercado Pago. É um processo seguro e você pode cancelar a qualquer momento, sem burocracia."
-    },
-    {
-        question: "A IA entende qualquer tipo de áudio ou comprovante?",
-        answer: "Nossa IA é treinada para entender português brasileiro com diferentes sotaques e para reconhecer os formatos mais comuns de notas fiscais e comprovantes. A precisão é altíssima, mas caso algo não seja identificado, o sistema notifica para uma revisão manual rápida."
-    },
-    {
-        question: "Meus dados estão seguros?",
-        answer: "Sim. Levamos a segurança muito a sério. Seus dados são criptografados e armazenados em servidores seguros, seguindo as melhores práticas de mercado."
-    }
+    { question: "Preciso de um aplicativo para usar o sistema?", answer: "Não! A grande vantagem do Obra.AI é que toda a interação da sua equipe de campo é feita diretamente pelo WhatsApp, um aplicativo que todos já usam. O gestor acessa o dashboard completo pelo navegador de qualquer dispositivo." },
+    { question: "Como funciona o pagamento?", answer: "O pagamento é feito por assinatura mensal através do Mercado Pago. É um processo seguro e você pode cancelar a qualquer momento, sem burocracia. O plano é ativado por um administrador após o cadastro." },
+    { question: "A IA entende qualquer tipo de áudio ou comprovante?", answer: "Nossa IA é treinada para entender português brasileiro com diferentes sotaques e para reconhecer os formatos mais comuns de notas fiscais e comprovantes. A precisão é altíssima, mas caso algo não seja identificado, o sistema notifica para uma revisão manual rápida." },
+    { question: "Meus dados estão seguros?", answer: "Sim. Levamos a segurança muito a sério. Seus dados são criptografados e armazenados em servidores seguros, seguindo as melhores práticas de mercado." }
 ];
 
 
@@ -47,30 +49,28 @@ export function Pricing() {
   return (
     <section id="precos" className="py-20 lg:py-32 bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Cabeçalho */}
         <div className="text-center max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-4xl">
-            Acesso completo e transparente
+            Escolha o plano ideal para sua necessidade
           </h2>
           <p className="mt-4 text-lg text-gray-600 dark:text-gray-300">
-            Libere o poder da Inteligência Artificial na gestão de custos da sua obra.
+            Comece a transformar a gestão de custos dos seus projetos hoje mesmo. O plano é ativado por um administrador após o seu cadastro.
           </p>
         </div>
 
-        {/* Cards de Preço - Apenas 1 no centro */}
-        <div className="mt-16 grid grid-cols-1 gap-8 max-w-sm mx-auto">
+        <div className="mt-16 grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-4xl mx-auto">
           {plans.map((plan) => (
-            <div key={plan.name} className={`relative p-8 rounded-2xl shadow-xl border ${plan.isMostPopular ? 'border-blue-500 bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'}`}>
+            <div key={plan.name} className={cn('relative p-8 rounded-2xl shadow-lg border flex flex-col', plan.isMostPopular ? 'border-blue-500 bg-white dark:bg-gray-900' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700')}>
               {plan.isMostPopular && (
                 <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2">
                     <span className="inline-flex items-center px-4 py-1 rounded-full text-sm font-semibold tracking-wider text-white bg-blue-600">
-                        PLANO ÚNICO
+                        MAIS POPULAR
                     </span>
                 </div>
               )}
               
               <h3 className="text-2xl font-bold text-gray-900 dark:text-white">{plan.name}</h3>
-              <p className="mt-4 text-gray-600 dark:text-gray-300">{plan.description}</p>
+              <p className="mt-4 text-gray-600 dark:text-gray-300 flex-grow">{plan.description}</p>
               
               <div className="mt-6">
                 <span className="text-5xl font-extrabold text-gray-900 dark:text-white">{plan.price}</span>
@@ -86,15 +86,13 @@ export function Pricing() {
                 ))}
               </ul>
 
-              <Button size="lg" className={`w-full mt-10`} asChild>
-                {/* O link agora leva para a página de registro */}
+              <Button size="lg" className="w-full mt-10" asChild>
                 <Link href={plan.href}>{plan.cta} <ArrowRight className="ml-2 h-5 w-5" /></Link>
               </Button>
             </div>
           ))}
         </div>
 
-        {/* Seção de FAQ */}
         <div className="mt-24 max-w-4xl mx-auto">
             <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white">Dúvidas Frequentes</h3>
             <div className="mt-8 space-y-4">
@@ -113,7 +111,6 @@ export function Pricing() {
                 ))}
             </div>
         </div>
-
       </div>
     </section>
   );
