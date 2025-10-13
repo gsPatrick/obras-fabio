@@ -1,107 +1,86 @@
 // components/dashboard/Sidebar.js
 'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Home, FileText, ClipboardPlus, LayoutGrid, Settings, Users, TrendingUp } from "lucide-react"; // Adicionado TrendingUp
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator"; // Adicionado Separator
-import { useAuth } from "@/context/AuthContext"; // Adicionado useAuth
-
-const navItems = [
-  { href: "/Painel", icon: Home, label: "Dashboard" },
-  { href: "/expenses", icon: ClipboardPlus, label: "Despesas" },
-  { href: "/reports", icon: FileText, label: "Relatórios" },
-  { href: "/categories", icon: LayoutGrid, label: "Categorias" },
-  { href: "/guests", icon: Users, label: "Convidados" }, 
-];
-
-// <<< INÍCIO: NOVOS LINKS DE ADMIN >>>
-const adminNavItems = [
-    { href: "/admin/users", icon: Users, label: "Usuários" },
-    { href: "/admin/profits", icon: TrendingUp, label: "Lucros" },
-];
-// <<< FIM: NOVOS LINKS DE ADMIN >>>
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  Home,
+  Package,
+  Users,
+  LineChart,
+  Settings,
+  CreditCard,
+  ListChecks,
+  Banknote,
+} from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { user } = useAuth(); // <<< PEGAR O USUÁRIO DO CONTEXTO
+  const { user } = useAuth();
+
+  const navLinks = [
+    { href: "/Painel", icon: Home, label: "Painel" }, // ROTA CORRIGIDA
+    { href: "/revenues", icon: Banknote, label: "Entradas" },
+    { href: "/expenses", icon: Package, label: "Custos" },
+    { href: "/credit-cards", icon: CreditCard, label: "Cartões de Crédito" },
+    { href: "/categories", icon: ListChecks, label: "Categorias" },
+    { href: "/reports", icon: LineChart, label: "Relatórios" },
+    { href: "/guests", icon: Users, label: "Convidados" },
+  ];
+
+  const adminLinks = [
+    { href: "/admin/users", icon: Users, label: "Admin: Usuários" },
+    { href: "/admin/profits", icon: LineChart, label: "Admin: Lucros" },
+  ];
+
+  const renderLink = (link) => {
+    const isActive = pathname === link.href;
+    return (
+      <Tooltip key={link.href}>
+        <TooltipTrigger asChild>
+          <Link
+            href={link.href}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8",
+              isActive 
+                ? "bg-accent text-accent-foreground" 
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <link.icon className="h-5 w-5" />
+            <span className="sr-only">{link.label}</span>
+          </Link>
+        </TooltipTrigger>
+        <TooltipContent side="right">{link.label}</TooltipContent>
+      </Tooltip>
+    );
+  };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-white sm:flex dark:bg-gray-950">
-      <TooltipProvider>
+    <TooltipProvider>
+      <aside className="fixed inset-y-0 left-0 z-10 hidden w-14 flex-col border-r bg-background sm:flex">
         <nav className="flex flex-col items-center gap-4 px-2 sm:py-5">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Tooltip key={item.label}>
-                <TooltipTrigger asChild>
-                  <Link
-                    href={item.href}
-                    className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8 ${
-                      isActive
-                        ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                        : "text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-gray-50"
-                    }`}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    <span className="sr-only">{item.label}</span>
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="right">{item.label}</TooltipContent>
-              </Tooltip>
-            );
-          })}
-
-          {/* <<< INÍCIO: RENDERIZAÇÃO CONDICIONAL PARA ADMIN >>> */}
+          {navLinks.map(link => renderLink(link))}
+          
+          {/* SEPARADOR VISUAL PARA LINKS DE ADMIN */}
           {user?.email === 'fabio@gmail.com' && (
-            <>
-                <Separator className="my-2 bg-border w-4/5" />
-                {adminNavItems.map((item) => {
-                    const isActive = pathname.startsWith(item.href);
-                    return (
-                        <Tooltip key={item.label}>
-                            <TooltipTrigger asChild>
-                            <Link
-                                href={item.href}
-                                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8 ${
-                                isActive
-                                    ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                                    : "text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-gray-50"
-                                }`}
-                            >
-                                <item.icon className="h-5 w-5" />
-                                <span className="sr-only">{item.label}</span>
-                            </Link>
-                            </TooltipTrigger>
-                            <TooltipContent side="right">{item.label}</TooltipContent>
-                        </Tooltip>
-                    );
-                })}
-            </>
+            <div className="my-2 w-full border-t border-border" />
           )}
-          {/* <<< FIM: RENDERIZAÇÃO CONDICIONAL >>> */}
+
+          {user?.email === 'fabio@gmail.com' && adminLinks.map(link => renderLink(link))}
         </nav>
-        
         <nav className="mt-auto flex flex-col items-center gap-4 px-2 sm:py-5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Link
-                href="/settings"
-                className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors md:h-8 md:w-8 ${
-                    pathname === '/settings'
-                        ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary"
-                        : "text-gray-500 hover:text-gray-950 dark:text-gray-400 dark:hover:text-gray-50"
-                }`}
-              >
-                <Settings className="h-5 w-5" />
-                <span className="sr-only">Configurações</span>
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Configurações</TooltipContent>
-          </Tooltip>
+          {renderLink({ href: "/settings", icon: Settings, label: "Configurações" })}
         </nav>
-      </TooltipProvider>
-    </aside>
+      </aside>
+    </TooltipProvider>
   );
 }

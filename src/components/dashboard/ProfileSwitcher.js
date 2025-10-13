@@ -3,36 +3,35 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Plus, Loader2 } from 'lucide-react';
+import { Check, Plus, Loader2, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-// Função auxiliar para obter as iniciais (reutilizada do Header)
-const getInitials = (text) => {
-    if (!text) return '..';
-    const parts = text.split('@');
-    return parts[0].substring(0, 2).toUpperCase();
-};
-
-export function ProfileSwitcher({ currentProfileId }) {
+export function ProfileSwitcher() {
     const { user, selectProfile, logout } = useAuth();
     const router = useRouter();
     const [profiles, setProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
-    
-    // Obter todos os perfis do usuário
+    const [currentProfile, setCurrentProfile] = useState(null);
+
     useEffect(() => {
-        const fetchProfiles = async () => {
+        const fetchAndSetProfiles = async () => {
             if (!user) return;
             setLoading(true);
             try {
-                // Rota /profiles só exige JWT, não X-Profile-Id
-                const response = await api.get('/profiles'); 
-                setProfiles(response.data || []);
+                const response = await api.get('/profiles');
+                const userProfiles = response.data || [];
+                setProfiles(userProfiles);
+
+                const storedProfileId = localStorage.getItem('selectedProfileId');
+                if (storedProfileId) {
+                    const activeProfile = userProfiles.find(p => p.id === parseInt(storedProfileId, 10));
+                    setCurrentProfile(activeProfile);
+                }
             } catch (err) {
                 console.error("Falha ao carregar perfis para o switcher:", err);
             } finally {
@@ -40,31 +39,36 @@ export function ProfileSwitcher({ currentProfileId }) {
             }
         };
 
-        fetchProfiles();
+        fetchAndSetProfiles();
     }, [user]);
-    
-    // Handler para trocar de perfil
+
     const handleProfileSwitch = (profileId) => {
-        // A função selectProfile do AuthContext fará o setProfileId e o router.push('/dashboard')
+        // A função selectProfile do AuthContext fará a mágica do recarregamento.
         selectProfile(profileId); 
     };
-    
-    // Encontra o perfil atualmente selecionado para o Avatar
-    const currentProfile = profiles.find(p => p.id === parseInt(currentProfileId, 10));
-    
-    // Encontra o email inicial do usuário para o fallback
-    const userInitials = user ? getInitials(user.email) : '..';
+
+    const getInitials = (name) => {
+        return name ? name.substring(0, 2).toUpperCase() : '?';
+    };
 
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="overflow-hidden rounded-full">
-                    <Avatar>
-                        {/* Avatar do Perfil ou Iniciais do Usuário */}
-                        <AvatarFallback className="bg-primary/20 text-primary">
-                            {currentProfile ? getInitials(currentProfile.name) : userInitials}
-                        </AvatarFallback>
-                    </Avatar>
+                <Button variant="outline" className="flex items-center gap-2">
+                    {loading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                        <>
+                            <Avatar className="size-6">
+                                {currentProfile?.image_url && <AvatarImage src={currentProfile.image_url} alt={currentProfile.name} />}
+                                <AvatarFallback className="text-xs">
+                                    {getInitials(currentProfile?.name)}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span className="hidden md:inline">{currentProfile?.name || 'Selecionar Perfil'}</span>
+                            <ChevronsUpDown className="h-4 w-4 opacity-50" />
+                        </>
+                    )}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
@@ -76,30 +80,20 @@ export function ProfileSwitcher({ currentProfileId }) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
 
-                <DropdownMenuLabel>Perfis ({profiles.length})</DropdownMenuLabel>
+                <DropdownMenuLabel>Trocar de Perfil</DropdownMenuLabel>
                 {loading ? (
                     <DropdownMenuItem disabled>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Carregando Perfis...
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" /> Carregando...
                     </DropdownMenuItem>
                 ) : (
                     profiles.map((profile) => (
                         <DropdownMenuItem 
                             key={profile.id} 
                             onClick={() => handleProfileSwitch(profile.id)}
-                            className={cn(
-                                "flex items-center justify-between",
-                                profile.id === parseInt(currentProfileId, 10) && "bg-accent text-accent-foreground"
-                            )}
+                            className="flex items-center justify-between"
                         >
-                            <div className="flex items-center gap-2">
-                                <Avatar className="size-6">
-                                    <AvatarFallback className="text-xs bg-secondary">
-                                        {getInitials(profile.name)}
-                                    </AvatarFallback>
-                                </Avatar>
-                                {profile.name}
-                            </div>
-                            {profile.id === parseInt(currentProfileId, 10) && <Check className="h-4 w-4" />}
+                            <span>{profile.name}</span>
+                            {profile.id === currentProfile?.id && <Check className="h-4 w-4" />}
                         </DropdownMenuItem>
                     ))
                 )}

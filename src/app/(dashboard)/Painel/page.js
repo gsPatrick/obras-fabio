@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, List, Package } from "lucide-react";
+import { DollarSign, List, Package, TrendingUp, Scale } from "lucide-react"; // Adicionado 'Scale' para o Saldo
 import api from '@/lib/api'; 
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +13,7 @@ import { CategoryPieChart } from '../../../components/dashboard/charts/CategoryP
 import { CategoryBarChart } from '../../../components/dashboard/charts/CategoryBarChart';
 import { Skeleton } from '@/components/ui/skeleton'; 
 import Link from 'next/link';
-import { cn } from '@/lib/utils'; // Importar cn para estilização condicional
+import { cn } from '@/lib/utils';
 
 // Componente para o estado de carregamento (Skeleton)
 const DashboardSkeleton = () => (
@@ -22,18 +22,19 @@ const DashboardSkeleton = () => (
             <Skeleton className="h-8 w-64" />
             <Skeleton className="h-10 w-full sm:w-[480px]" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-48" /></CardContent></Card>
             <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-48" /></CardContent></Card>
             <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-24" /></CardContent></Card>
             <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-40" /></CardContent></Card>
         </div>
-        <div className="grid gap-4 lg:grid-cols-12">
-            <Card className="lg:col-span-8"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
+        <div className="grid gap-4 lg:grid-cols-7">
             <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
+            <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
         </div>
-        <div className="grid gap-4 lg:grid-cols-12">
-            <Card className="lg:col-span-6"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
-            <Card className="lg:col-span-6"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
+        <div className="grid gap-4 lg:grid-cols-7">
+            <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
+            <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
         </div>
     </div>
 );
@@ -52,15 +53,16 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const [pieChartType, setPieChartType] = useState('category');
+
   const fetchData = useCallback(async (currentPeriod) => {
     setLoading(true);
     setError(null);
     try {
-        // Buscamos todos os dados em paralelo para mais performance
         const [kpisRes, chartsRes, expensesRes] = await Promise.all([
             api.get(`/dashboard/kpis?period=${currentPeriod}`),
             api.get(`/dashboard/charts?period=${currentPeriod}`),
-            api.get(`/dashboard/expenses?period=${currentPeriod}&limit=5`) // Apenas 5 mais recentes
+            api.get(`/dashboard/expenses?period=${currentPeriod}&limit=5`)
         ]);
 
         setData({
@@ -93,11 +95,14 @@ export default function DashboardPage() {
   }
   
   const { kpis, charts, recentExpenses } = data;
+  
+  const pieChartData = pieChartType === 'category' ? charts.pieChart : charts.pieChartByType;
+  const pieChartEmptyMessage = pieChartType === 'category' ? "Sem categorias para exibir." : "Sem tipos de custo para exibir.";
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard de Custos</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
         <Tabs defaultValue={period} onValueChange={setPeriod} className="w-full sm:w-auto">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="daily">Diário</TabsTrigger>
@@ -109,34 +114,56 @@ export default function DashboardPage() {
         </Tabs>
       </div>
 
-      {/* KPIs - Total de Custos em vermelho */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Card de Receitas */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {(kpis.totalRevenues || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </div>
+            <p className="text-xs text-muted-foreground">no período selecionado</p>
+          </CardContent>
+        </Card>
+        {/* Card de Custos */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Custos</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-<div
-  className={cn(
-    "text-2xl font-bold",
-    (kpis.totalExpenses || 0) > 0
-      ? "text-red-600 dark:text-red-400"
-      : "text-foreground"
-  )}
->
-  -{(kpis.totalExpenses || 0).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  })}
-</div>
-
+            <div className={cn("text-2xl font-bold", (kpis.totalExpenses || 0) > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
+              -{(kpis.totalExpenses || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </div>
             <p className="text-xs text-muted-foreground">no período selecionado</p>
           </CardContent>
         </Card>
+        
+        {/* <<< INÍCIO DA MODIFICAÇÃO: NOVO CARD DE SALDO >>> */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nº de Lançamentos</CardTitle>
+            <CardTitle className="text-sm font-medium">Saldo (Lucro / Prejuízo)</CardTitle>
+            <Scale className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={cn("text-2xl font-bold", 
+                kpis.balance > 0 ? "text-green-600 dark:text-green-400" : 
+                kpis.balance < 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
+            )}>
+              {(kpis.balance || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            </div>
+            <p className="text-xs text-muted-foreground">Receitas - Custos no período</p>
+          </CardContent>
+        </Card>
+        {/* <<< FIM DA MODIFICAÇÃO >>> */}
+
+        {/* Card de Lançamentos */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Nº de Lançamentos (Custos)</CardTitle>
             <List className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -144,21 +171,8 @@ export default function DashboardPage() {
             <p className="text-xs text-muted-foreground">registros no período</p>
           </CardContent>
         </Card>
-        <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Principal Categoria</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-xl font-bold">{kpis.highestCategory.name || 'N/A'}</div>
-                <p className="text-xs text-muted-foreground">
-                    {(kpis.highestCategory.total || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} gastos
-                </p>
-            </CardContent>
-        </Card>
       </div>
-
-      {/* GRÁFICOS PRINCIPAIS - Layout 2/1 */}
+      
       <div className="grid gap-4 lg:grid-cols-7"> 
         <Card className="lg:col-span-4">
           <CardHeader>
@@ -167,31 +181,38 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="pl-2">
             {charts.lineChart.data && charts.lineChart.data.length > 0 ? (
-                <TimeSeriesChart 
-                    // Passamos o array com objetos que tem a chave 'date' e 'total'
-                    data={charts.lineChart.labels.map((date, index) => ({ date: date, total: charts.lineChart.data[index] }))} 
-                />
+                <TimeSeriesChart data={charts.lineChart.labels.map((date, index) => ({ date: date, total: charts.lineChart.data[index] }))} />
             ) : (
                 <EmptyState message="Sem dados de evolução para exibir." />
             )}
           </CardContent>
         </Card>
+
         <Card className="lg:col-span-3">
           <CardHeader>
             <CardTitle>Distribuição de Custos (%)</CardTitle>
-            <CardDescription>Distribuição percentual dos gastos por categoria.</CardDescription>
+            <CardDescription>
+                {pieChartType === 'category'
+                    ? 'Distribuição percentual dos gastos por categoria.'
+                    : 'Distribuição percentual dos gastos por tipo de custo.'}
+            </CardDescription>
+            <Tabs defaultValue="category" onValueChange={setPieChartType} className="w-full pt-2">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="category">Por Categoria</TabsTrigger>
+                    <TabsTrigger value="type">Por Tipo</TabsTrigger>
+                </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent>
-            {charts.pieChart && charts.pieChart.length > 0 ? (
-                <CategoryPieChart data={charts.pieChart} />
+            {pieChartData && pieChartData.length > 0 ? (
+                <CategoryPieChart data={pieChartData} />
             ) : (
-                <EmptyState message="Sem categorias para exibir." />
+                <EmptyState message={pieChartEmptyMessage} />
             )}
           </CardContent>
         </Card>
       </div>
       
-      {/* NOVO GRÁFICO (Top 5) + Tabela Recente - Layout 1/1 */}
       <div className="grid gap-4 lg:grid-cols-7">
         <Card className="lg:col-span-4">
             <CardHeader>
@@ -199,7 +220,11 @@ export default function DashboardPage() {
                 <CardDescription>Categorias com o maior volume de gastos no período.</CardDescription>
             </CardHeader>
             <CardContent>
-                <CategoryBarChart data={charts.pieChart} />
+                {charts.pieChart && charts.pieChart.length > 0 ? (
+                    <CategoryBarChart data={charts.pieChart} />
+                ) : (
+                    <EmptyState message="Sem dados para exibir." />
+                )}
             </CardContent>
         </Card>
 
