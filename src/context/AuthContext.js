@@ -84,6 +84,7 @@ export const AuthProvider = ({ children }) => {
             // Isso garante que todos os componentes (Header, Sidebar, etc.)
             // sejam renderizados do zero e que o interceptor do api.js leia o
             // novo profileId do localStorage para todas as futuras requisições.
+            //tesde 
             window.location.href = '/Painel';
         } else {
             router.push('/profiles/select');
