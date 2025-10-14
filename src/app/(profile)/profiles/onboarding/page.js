@@ -1,7 +1,7 @@
 // app/(profile)/onboarding/page.js
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react'; 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Bot, ChevronRight, ClipboardList, Copy, PlusCircle, Trash2, Pencil, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
