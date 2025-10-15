@@ -112,7 +112,7 @@ export function SignUpForm() {
           <div className="text-center">
             <CardTitle className="text-2xl font-bold tracking-tight">Crie sua Conta</CardTitle>
             <CardDescription>
-              Insira seus dados para começar a gerenciar sua obra.
+              Insira seus dados para começar a gerenciar o sistema.
             </CardDescription>
           </div>
         </CardHeader>

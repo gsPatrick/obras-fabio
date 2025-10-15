@@ -31,7 +31,7 @@ export function Footer() {
                     <div className="flex flex-col items-center md:items-start text-center md:text-left">
                         <Link href="/" className="flex items-center gap-2 mb-4">
                             <Logo />
-                            <span className="text-xl font-bold text-gray-800 dark:text-white">Obra.AI</span>
+                            <span className="text-xl font-bold text-gray-800 dark:text-white">Kontrolly</span>
                         </Link>
                         <p className="text-gray-500 dark:text-gray-400 text-sm">
                             Simplificando a gestão de custos na construção civil.

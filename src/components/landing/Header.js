@@ -34,7 +34,7 @@ export function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Logo />
-            <span className="text-xl font-bold text-gray-800 dark:text-white">Obra.AI</span>
+            <span className="text-xl font-bold text-gray-800 dark:text-white">Kontrolly</span>
           </Link>
 
           {/* Navegação Desktop */}

@@ -117,7 +117,7 @@ export function LoginForm() {
               Acessar Painel de Controle
             </CardTitle>
             <CardDescription>
-              Insira suas credenciais para gerenciar a obra.
+              Insira suas credenciais para gerenciar.
             </CardDescription>
           </div>
         </CardHeader>

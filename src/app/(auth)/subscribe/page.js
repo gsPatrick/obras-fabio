@@ -96,7 +96,7 @@ export default function SubscribePage() {
             </div>
             
             <div className="text-center mb-6 max-w-lg mx-auto">
-                <h1 className="text-3xl font-bold">Ative o Monitoramento da sua Obra</h1>
+                <h1 className="text-3xl font-bold">Ative o Monitoramento do seu grupo</h1>
                 <p className="text-gray-500 mt-2">Escolha o plano mensal para desbloquear a inteligência artificial do WhatsApp.</p>
                 {user && <p className="text-sm text-muted-foreground mt-4">Logado como: {user.email}</p>}
                 
