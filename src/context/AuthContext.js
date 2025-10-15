@@ -1,10 +1,10 @@
-// context/AuthContext.js - VERSÃO COM FLUXO DE LOGIN CORRIGIDO
+// context/AuthContext.js - VERSÃO REESTRUTURADA E DEFINITIVA
 
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import api, { setProfileId } from '@/lib/api'; 
+import api, { setProfileId as setProfileIdInApi } from '@/lib/api'; 
 import { Loader2 } from 'lucide-react';
 
 const AuthContext = createContext(null);
@@ -15,9 +15,13 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
+    
+    // <<< NOVO ESTADO CENTRALIZADO PARA O PERFIL ATIVO >>>
+    const [activeProfile, setActiveProfile] = useState(null);
+
     const router = useRouter();
 
-    const loadUserFromToken = useCallback(async () => {
+    const loadUserAndProfile = useCallback(async () => {
         if (typeof window === 'undefined') {
             setLoading(false);
             return;
@@ -26,9 +30,24 @@ export const AuthProvider = ({ children }) => {
         const token = localStorage.getItem('authToken');
         if (token) {
             try {
-                const response = await api.get('/users/me');
-                setUser(response.data);
+                const userResponse = await api.get('/users/me');
+                setUser(userResponse.data);
                 setIsAuthenticated(true);
+
+                // Após autenticar, verifica se há um perfil ativo no localStorage
+                const storedProfileId = localStorage.getItem('currentProfileId');
+                if (storedProfileId) {
+                    // Se houver, busca todos os perfis e define o ativo
+                    const profilesResponse = await api.get('/profiles');
+                    const profileToActivate = profilesResponse.data.find(p => p.id === parseInt(storedProfileId, 10));
+                    if (profileToActivate) {
+                        setActiveProfile(profileToActivate);
+                    } else {
+                        // Se o ID armazenado é inválido, limpa
+                        localStorage.removeItem('currentProfileId');
+                        setActiveProfile(null);
+                    }
+                }
             } catch (error) {
                 console.error("Token inválido ou sessão expirada:", error);
                 logout(); 
@@ -38,50 +57,43 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        loadUserFromToken();
-    }, [loadUserFromToken]);
+        loadUserAndProfile();
+    }, [loadUserAndProfile]);
 
     const login = async (email, password) => {
         try {
             const response = await api.post('/auth/login', { email, password });
-            
-            // <<< MUDANÇA CRÍTICA: A API não envia mais 'profileId' no login >>>
             const { token } = response.data;
-
-            // 1. Salva o token no localStorage
             localStorage.setItem('authToken', token);
-
-            // 2. Carrega os dados do usuário para o contexto
-            await loadUserFromToken();
-
-            // 3. Redireciona INCONDICIONALMENTE para a página de seleção de perfis
+            // Após o login, limpa qualquer perfil antigo para forçar a seleção
+            setProfileIdInApi(null); 
+            setActiveProfile(null);
+            await loadUserAndProfile();
             router.push('/profiles/select');
-
         } catch (error) {
-            // Lança o erro para a página de login poder exibi-lo
             throw error;
         }
     };
     
     const selectProfile = (profileId) => {
-        // Esta função agora é usada pela página de seleção e pelo switcher de perfis
-        setProfileId(profileId); 
+        // 1. Define o ID no localStorage para persistência e para o interceptor da API
+        setProfileIdInApi(profileId);
         
+        // 2. Redireciona. O useEffect acima cuidará de carregar o objeto do perfil.
         if (profileId) {
-            // Força um recarregamento completo para garantir que todos os componentes
-            // e dados sejam recarregados com o novo contexto de perfil.
             window.location.href = '/Painel';
         } else {
-            // Se, por algum motivo, um perfil for "desselecionado", volta para a tela de seleção.
+            setActiveProfile(null);
             router.push('/profiles/select');
         }
     };
 
     const logout = () => {
         localStorage.removeItem('authToken');
-        setProfileId(null); 
+        setProfileIdInApi(null); // Limpa o ID do localStorage
         setUser(null);
         setIsAuthenticated(false);
+        setActiveProfile(null); // Limpa o estado do perfil ativo
         window.location.href = '/login';
     };
 
@@ -92,6 +104,7 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         selectProfile,
+        activeProfile, // <<< EXPORTA O PERFIL ATIVO PARA OS COMPONENTES
     };
     
     if (loading) {

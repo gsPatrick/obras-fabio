@@ -1,4 +1,4 @@
-// app/(profile)/manage/page.js
+// app/(profile)/manage/page.js - VERSÃO COMPLETA E SEM OMISSÕES
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,15 +12,15 @@ import { Label } from '@/components/ui/label';
 import { DeleteConfirmation } from '@/components/dashboard/DeleteConfirmation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ImportOrDashboardModal } from '@/components/profile/ImportOrDashboardModal'; 
+import { useAuth } from '@/context/AuthContext';
 
-// CRÍTICO: Novo Placeholder
+// Placeholder para imagem de perfil padrão
 const DEFAULT_PLACEHOLDER_URL = '/usuario.png'; 
 
 // Componente de formulário de criação/edição
 const ProfileForm = ({ profile, onSave, onCancel, isCreatingFirst }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [name, setName] = useState(profile?.name || '');
-    // Usa a URL padrão se não houver image_url no perfil
     const [imageUrl, setImageUrl] = useState(profile?.image_url || DEFAULT_PLACEHOLDER_URL);
     const [error, setError] = useState(null);
     
@@ -29,7 +29,6 @@ const ProfileForm = ({ profile, onSave, onCancel, isCreatingFirst }) => {
         setError(null);
         setIsLoading(true);
         try {
-            // Se o campo de URL estiver vazio ou for o placeholder, salva como null
             const finalImageUrl = imageUrl === DEFAULT_PLACEHOLDER_URL || !imageUrl ? null : imageUrl;
             const data = { name, image_url: finalImageUrl };
             await onSave(profile?.id, data);
@@ -49,12 +48,11 @@ const ProfileForm = ({ profile, onSave, onCancel, isCreatingFirst }) => {
             <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="flex justify-center mb-4">
-                        {/* Exibir a imagem atual (ou o placeholder) */}
                         <img 
                             src={imageUrl} 
                             alt="Avatar Preview" 
                             className="size-24 rounded-lg object-cover border border-border" 
-                            onError={(e) => e.target.src = DEFAULT_PLACEHOLDER_URL} // Fallback em caso de URL inválida
+                            onError={(e) => e.target.src = DEFAULT_PLACEHOLDER_URL}
                         />
                     </div>
                     
@@ -66,7 +64,6 @@ const ProfileForm = ({ profile, onSave, onCancel, isCreatingFirst }) => {
                         <Label htmlFor="image_url">URL da Imagem (Opcional)</Label>
                         <Input 
                             id="image_url" 
-                            // Exibe a URL real ou vazio para que o usuário possa digitar (mas o estado interno é o placeholder)
                             value={imageUrl === DEFAULT_PLACEHOLDER_URL && !profile?.image_url ? '' : imageUrl} 
                             onChange={(e) => setImageUrl(e.target.value || DEFAULT_PLACEHOLDER_URL)} 
                             disabled={isLoading} 
@@ -93,10 +90,10 @@ const ProfileForm = ({ profile, onSave, onCancel, isCreatingFirst }) => {
 export default function ManageProfilesPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { user } = useAuth();
     
     const [profiles, setProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
-    // type: 'create' | 'edit' | 'delete' | 'import_or_dashboard'
     const [currentAction, setCurrentAction] = useState({ type: null, data: null }); 
     
     const fetchData = async () => {
@@ -115,17 +112,13 @@ export default function ManageProfilesPage() {
         fetchData();
     }, []);
     
-    // CRÍTICO: Lógica de inicialização de ação (se veio do select ou se não há perfis)
     useEffect(() => {
         const action = searchParams.get('action');
         
-        // Bloqueia a lógica se já estiver no fluxo de modal pós-criação
         if (!loading && currentAction.type !== 'import_or_dashboard') {
             if (action === 'create') {
-                // Veio do botão "Adicionar Perfil" -> vai direto para o formulário
                 setCurrentAction({ type: 'create', data: { isFirstCreation: profiles.length === 0 } });
             } else if (profiles.length === 0 && currentAction.type !== 'create') {
-                 // Não tem perfis e não está no fluxo de criação -> força a criação
                  setCurrentAction({ type: 'create', data: { isFirstCreation: true } });
             }
         }
@@ -135,16 +128,12 @@ export default function ManageProfilesPage() {
     const handleSave = async (id, data) => {
         try {
             if (id) {
-                // Fluxo de Edição
                 await api.put(`/profiles/${id}`, data);
                 fetchData();
                 setCurrentAction({ type: null, data: null });
             } else {
-                // Fluxo de Criação
                 const response = await api.post('/profiles', data);
                 fetchData(); 
-                
-                // CRÍTICO: Abre o modal de escolha após a criação
                 setCurrentAction({ type: 'import_or_dashboard', data: { profileId: response.data.id, profileName: response.data.name } });
             }
         } catch (err) {
@@ -159,7 +148,6 @@ export default function ManageProfilesPage() {
             setProfiles(remainingProfiles);
             setCurrentAction({ type: null, data: null });
             
-            // Se deletou o último perfil, força o redirecionamento para o select
             if (remainingProfiles.length === 0) { 
                 router.push('/profiles/select');
             }
@@ -168,40 +156,36 @@ export default function ManageProfilesPage() {
         }
     };
     
-    // Função de fechamento do Modal de Escolha Principal
     const handleChoiceModalClose = () => {
         setCurrentAction({ type: null, data: null });
-        router.push('/profiles/select'); // Voltar para a seleção
-    };
-
-    // Função de Cancelar/Voltar do Formulário
-    const handleCancelForm = () => {
-        // Redireciona para a tela de seleção de perfil
         router.push('/profiles/select');
     };
 
+    const handleCancelForm = () => {
+        router.push('/profiles/select');
+    };
+
+    const profileLimit = user?.subscription?.profile_limit ?? 1;
+    const canCreateProfile = profiles.length < profileLimit;
 
     if (loading) {
         return <div className="p-8 space-y-4 max-w-lg mx-auto"><Skeleton className="h-10 w-full" /><Skeleton className="h-40 w-full" /></div>;
     }
     
-    // Se estiver no fluxo de modal pós-criação, exibe o modal
     if (currentAction.type === 'import_or_dashboard') {
         return (
             <ImportOrDashboardModal 
                 open={true}
                 profileId={currentAction.data.profileId}
                 profileName={currentAction.data.profileName}
-                onClose={handleChoiceModalClose} // Ao fechar o modal, volta para a seleção
+                onClose={handleChoiceModalClose}
             />
         );
     }
     
-    // Tela de Criação/Edição
     if (currentAction.type === 'create' || currentAction.type === 'edit') {
         return (
             <div className="p-8 space-y-6 max-w-lg mx-auto">
-                {/* Botão de Voltar da Tela de Edição/Criação */}
                 <Button variant="ghost" onClick={handleCancelForm} disabled={currentAction.data?.isFirstCreation}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     {currentAction.data?.isFirstCreation ? 'Voltar (Crie um perfil primeiro)' : 'Voltar'}
@@ -209,14 +193,13 @@ export default function ManageProfilesPage() {
                 <ProfileForm 
                     profile={currentAction.data?.profile} 
                     onSave={handleSave} 
-                    onCancel={handleCancelForm} // <<< USANDO handleCancelForm
+                    onCancel={handleCancelForm}
                     isCreatingFirst={currentAction.data?.isFirstCreation}
                 />
             </div>
         );
     }
 
-    // Tela Principal de Gerenciamento
     return (
         <div className="p-8 space-y-8 max-w-4xl mx-auto">
             <div className="flex items-center justify-between">
@@ -226,16 +209,24 @@ export default function ManageProfilesPage() {
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Voltar para Seleção
                     </Button>
-                    <Button onClick={() => setCurrentAction({ type: 'create', data: null })}>
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Novo Perfil
-                    </Button>
+                    
+                    {canCreateProfile ? (
+                        <Button onClick={() => setCurrentAction({ type: 'create', data: null })}>
+                            <PlusCircle className="h-4 w-4 mr-2" />
+                            Novo Perfil
+                        </Button>
+                    ) : (
+                        <Button disabled title="Você atingiu o limite de perfis do seu plano.">
+                            <PlusCircle className="h-4 w-4 mr-2" />
+                            Limite de perfis atingido
+                        </Button>
+                    )}
                 </div>
             </div>
             
             <Card>
                 <CardHeader>
-                    <CardTitle>Perfis Cadastrados ({profiles.length})</CardTitle>
+                    <CardTitle>Perfis Cadastrados ({profiles.length}/{profileLimit})</CardTitle>
                     <CardDescription>Atenção: A exclusão de um perfil é irreversível e deleta todas as despesas associadas.</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -243,7 +234,6 @@ export default function ManageProfilesPage() {
                         {profiles.map(profile => (
                             <div key={profile.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    {/* Exibir a imagem do perfil ou o placeholder */}
                                     <img 
                                         src={profile.image_url || DEFAULT_PLACEHOLDER_URL} 
                                         alt={profile.name} 
@@ -269,7 +259,6 @@ export default function ManageProfilesPage() {
                 </CardContent>
             </Card>
 
-            {/* Modal de Confirmação de Exclusão */}
             {currentAction.type === 'delete' && (
                 <DeleteConfirmation 
                     open={true}

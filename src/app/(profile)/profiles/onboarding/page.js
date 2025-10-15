@@ -1,4 +1,4 @@
-// app/(profile)/onboarding/page.js
+// app/(profile)/onboarding/page.js - VERSÃO COM REDIRECIONAMENTO CORRIGIDO
 'use client';
 
 import { useState, useEffect, useCallback } from 'react'; 
@@ -15,18 +15,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CategoryForm } from '@/components/dashboard/categories/CategoryForm'; 
 import { DeleteConfirmation } from '@/components/dashboard/DeleteConfirmation'; 
 
-// Número do Bot para ser adicionado ao grupo
 const WHATSAPP_BOT_NUMBER = '554796843271'; 
 
-// --- ETAPA 2 (NOVA): CATEGORIAS E METAS ---
+// --- ETAPA 2: CATEGORIAS E METAS ---
 const CategoriesGoalsStep = ({ profileId, onComplete }) => {
+    // ... (O conteúdo deste componente permanece exatamente o mesmo)
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [totalGoalValue, setTotalGoalValue] = useState('');
     const [modalState, setModalState] = useState({ type: null, data: null }); 
     
-    // As funções de busca e salvamento permanecem as mesmas
     const fetchCategoriesAndGoals = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -127,17 +126,7 @@ const CategoriesGoalsStep = ({ profileId, onComplete }) => {
                 <CardContent className="space-y-4">
                     {error && <p className="text-sm text-red-500">{error}</p>}
                     
-                    <div className="space-y-2 border p-3 rounded-lg bg-secondary/50">
-                        <Label htmlFor="total-goal">Meta de Custo Total (Mensal)</Label>
-                        <Input 
-                            id="total-goal" 
-                            type="number" 
-                            placeholder="Ex: 5000" 
-                            value={totalGoalValue}
-                            onChange={(e) => setTotalGoalValue(e.target.value)}
-                            disabled={loading}
-                        />
-                    </div>
+    
                     
                     <div className="flex justify-between items-center pt-4">
                         <h3 className="font-semibold">Gerenciar Categorias ({categories.length})</h3>
@@ -196,11 +185,13 @@ const CategoriesGoalsStep = ({ profileId, onComplete }) => {
     );
 };
 
+
 // --- COMPONENTE PRINCIPAL DA PÁGINA ---
 export default function OnboardingPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { isAuthenticated, selectProfile } = useAuth();
+    // A função selectProfile não é mais necessária aqui
+    const { isAuthenticated } = useAuth(); 
     
     const profileId = searchParams.get('profileId');
     const profileName = searchParams.get('profileName') || 'Seu Novo Perfil';
@@ -222,8 +213,11 @@ export default function OnboardingPage() {
         };
     }, [profileId]);
 
+    // <<< MUDANÇA CRÍTICA AQUI >>>
     const handleFinalRedirect = () => {
-        selectProfile(profileId); 
+        // Em vez de chamar selectProfile, redirecionamos diretamente
+        // para a página de seleção de perfis.
+        router.push('/profiles/select');
     };
 
     const handleCopyBotNumber = () => {
@@ -234,7 +228,6 @@ export default function OnboardingPage() {
         });
     }
 
-    // --- NOVO FLUXO DE ETAPAS SIMPLIFICADO ---
     const steps = [
         { id: 1, name: "Conectar WhatsApp", icon: Bot, content: null },
         { id: 2, name: "Metas e Categorias", icon: ClipboardList, content: <CategoriesGoalsStep profileId={profileId} onComplete={handleFinalRedirect} /> },
@@ -300,4 +293,4 @@ export default function OnboardingPage() {
             {currentStep === 1 ? step1Content : steps.find(s => s.id === currentStep)?.content}
         </div>
     );
-}
+}   

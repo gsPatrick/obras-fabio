@@ -1,4 +1,4 @@
-// app/(profile)/select/page.js
+// app/(profile)/select/page.js - VERSÃO COMPLETA E COM LIMITADOR DE CRIAÇÃO
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { useSubscriptionCheck } from '@/hooks/useSubscriptionCheck'; // <<< IMPORTAR HOOK DE CHECAGEM DE PLANO
+import { useSubscriptionCheck } from '@/hooks/useSubscriptionCheck';
 
 // Componente do item de perfil
 const ProfileItem = ({ profile, onSelect }) => {
@@ -22,7 +22,6 @@ const ProfileItem = ({ profile, onSelect }) => {
                     "border-transparent group-hover:border-primary/50 group-hover:ring-4 group-hover:ring-primary/20"
                 )}
             >
-                {/* Mockup da imagem de perfil. Usamos div/cor se image_url for null */}
                 {profile.image_url ? (
                     <Image 
                         src={profile.image_url} 
@@ -50,7 +49,7 @@ const CreateProfileItem = ({ onCreate }) => {
                 className={cn(
                     "size-40 rounded-lg overflow-hidden border-4 transition-transform group-hover:scale-105",
                     "border-transparent group-hover:border-primary/50 group-hover:ring-4 group-hover:ring-primary/20",
-                    "bg-secondary flex items-center justify-center" // Usando secondary para um fundo cinza claro/escuro
+                    "bg-secondary flex items-center justify-center"
                 )}
             >
                 <Plus className="size-16 text-primary" />
@@ -61,20 +60,17 @@ const CreateProfileItem = ({ onCreate }) => {
 };
 
 export default function SelectProfilePage() {
-    const { isAuthenticated, selectProfile, logout, loading: authLoading } = useAuth();
+    const { user, isAuthenticated, selectProfile, logout, loading: authLoading } = useAuth();
     const router = useRouter();
     const [profiles, setProfiles] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
-    // <<< CRÍTICO: Checagem de Assinatura >>>
     const { isAllowed, checkLoading } = useSubscriptionCheck();
     
-    // Função para buscar perfis
     const fetchProfiles = useCallback(async () => {
         setLoading(true);
         try {
-            // A rota /profiles é a única que não exige o header X-Profile-Id
             const response = await api.get('/profiles');
             setProfiles(response.data);
         } catch (err) {
@@ -91,7 +87,6 @@ export default function SelectProfilePage() {
         }
     }, [authLoading, isAuthenticated, fetchProfiles]);
     
-    // 1. Redirecionamento de Desautenticação (Prioridade Máxima)
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
             router.push('/login');
@@ -99,35 +94,28 @@ export default function SelectProfilePage() {
     }, [authLoading, isAuthenticated, router]);
 
     const handleSelectProfile = (profileId) => {
-        selectProfile(profileId); // Salva o ID no AuthContext e redireciona para /dashboard
+        selectProfile(profileId);
     };
     
-    // Leva para o formulário de CRIAÇÃO
     const handleCreateProfile = () => {
         router.push('/profiles/manage?action=create'); 
     };
     
-    // Leva para a tela de GERENCIAMENTO (CRUD completo)
     const handleManageProfiles = () => {
         router.push('/profiles/manage'); 
     };
 
-    // =========================================================
-    // ESTADO DE CARREGAMENTO / BLOQUEIO DE PLANO
-    // =========================================================
+    const profileLimit = user?.subscription?.profile_limit ?? 1;
+    const canCreateProfile = profiles.length < profileLimit;
+
     if (loading || authLoading || checkLoading) {
         return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
     }
     
-    // O useSubscriptionCheck deve redirecionar para /subscribe se isAllowed for false.
-    // Se o código chegou aqui e !isAllowed, algo deu errado, mas o hook deve ter disparado o redirecionamento.
     if (!isAllowed) {
-        return null; // A tela de subscribe está sendo carregada
+        return null;
     }
     
-    // =========================================================
-    // RENDERIZAÇÃO PRINCIPAL
-    // =========================================================
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-8"> 
             <h1 className="text-4xl font-bold mb-12">Quem está gerenciando?</h1>
@@ -140,12 +128,13 @@ export default function SelectProfilePage() {
                         onSelect={handleSelectProfile} 
                     />
                 ))}
-                {/* O clique agora vai direto para o formulário de criação */}
-                <CreateProfileItem onCreate={handleCreateProfile} />
+                
+                {canCreateProfile && (
+                    <CreateProfileItem onCreate={handleCreateProfile} />
+                )}
             </div>
 
             <div className="mt-16 space-x-4">
-                {/* Ação de Gerenciamento (CRUD completo) */}
                 <Button variant="outline" onClick={handleManageProfiles} className="border-border text-foreground hover:bg-accent/50">
                     GERENCIAR PERFIS
                 </Button>
