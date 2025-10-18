@@ -1,9 +1,8 @@
-// components/dashboard/ProfileSwitcher.js - VERSÃO COMPLETA COM LIMITADOR
+// components/dashboard/ProfileSwitcher.js - VERSÃO CENTRALIZADA E FINAL
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-// <<< CRÍTICO: Importar o ícone 'Pencil' >>>
 import { Check, Plus, Loader2, ChevronsUpDown, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -12,6 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 
 export function ProfileSwitcher() {
+    // USA DIRETAMENTE OS DADOS DO CONTEXTO, SEM ESTADO LOCAL
     const { user, selectProfile, logout, activeProfile, loading: authLoading } = useAuth();
     const router = useRouter();
     
@@ -32,8 +32,10 @@ export function ProfileSwitcher() {
             }
         };
 
-        fetchProfiles();
-    }, [user]);
+        if (!authLoading) {
+            fetchProfiles();
+        }
+    }, [user, authLoading]);
 
     const handleProfileSwitch = (profileId) => {
         selectProfile(profileId); 
@@ -43,7 +45,6 @@ export function ProfileSwitcher() {
         return name ? name.substring(0, 2).toUpperCase() : '?';
     };
     
-    // <<< NOVA LÓGICA DE VERIFICAÇÃO DE LIMITE >>>
     const profileLimit = user?.subscription?.profile_limit ?? 1;
     const canCreateProfile = profiles.length < profileLimit;
     const isLoading = loading || authLoading;
@@ -97,14 +98,12 @@ export function ProfileSwitcher() {
                 
                 <DropdownMenuSeparator />
                 
-                {/* <<< CRÍTICO: Renderização condicional do item "Adicionar Perfil" >>> */}
                 {canCreateProfile && (
                     <DropdownMenuItem onClick={() => router.push('/profiles/manage?action=create')}>
                         <Plus className="h-4 w-4 mr-2" /> Adicionar Perfil
                     </DropdownMenuItem>
                 )}
                 
-                {/* Item "Gerenciar Perfis" agora está sempre visível e tem um ícone diferente */}
                 <DropdownMenuItem onClick={() => router.push('/profiles/manage')}>
                     <Pencil className="h-4 w-4 mr-2" /> Gerenciar Perfis
                 </DropdownMenuItem>

@@ -50,7 +50,15 @@ export const AuthProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error("Token inválido ou sessão expirada:", error);
-                logout(); 
+                // --- INÍCIO DA CORREÇÃO ---
+                // Em vez de chamar logout() que faz um hard refresh,
+                // apenas limpamos o estado local. O layout cuidará do redirecionamento.
+                localStorage.removeItem('authToken');
+                setProfileIdInApi(null);
+                setUser(null);
+                setIsAuthenticated(false);
+                setActiveProfile(null);
+                // --- FIM DA CORREÇÃO ---
             }
         }
         setLoading(false);
@@ -81,6 +89,8 @@ export const AuthProvider = ({ children }) => {
         
         // 2. Redireciona. O useEffect acima cuidará de carregar o objeto do perfil.
         if (profileId) {
+            // Força um recarregamento da página para garantir que todos os componentes
+            // recebam o novo estado do perfil. Essencial para o dashboard.
             window.location.href = '/Painel';
         } else {
             setActiveProfile(null);
@@ -94,7 +104,7 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setIsAuthenticated(false);
         setActiveProfile(null); // Limpa o estado do perfil ativo
-        window.location.href = '/login';
+        window.location.href = '/login'; // Força recarregamento para limpar estados
     };
 
     const value = {
