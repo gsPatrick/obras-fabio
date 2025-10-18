@@ -12,7 +12,7 @@ export default function DashboardLayout({ children }) {
         <main className="flex-1 gap-4 p-4 sm:px-6 sm:py-0 md:gap-8">
           {children}
         </main>
-      </div>
+      </div> 
     </div>
   );
-}
+}//teste
