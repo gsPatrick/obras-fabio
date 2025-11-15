@@ -117,14 +117,12 @@ export const AuthProvider = ({ children }) => {
         activeProfile, // <<< EXPORTA O PERFIL ATIVO PARA OS COMPONENTES
     };
     
-    if (loading) {
-        return (
-            <div className="flex h-screen w-full items-center justify-center bg-background">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-        );
-    }
-
+    // <<< CORREÇÃO APLICADA AQUI >>>
+    // O bloco 'if (loading)' que retornava um Loader de tela cheia foi removido.
+    // O Provider agora SEMPRE renderiza, garantindo a estabilidade da árvore de componentes.
+    // Os componentes filhos que consomem o contexto (como layouts) usarão o estado `loading`
+    // para exibir seus próprios indicadores de carregamento sem desmontar a aplicação inteira.
+    
     return (
         <AuthContext.Provider value={value}>
             {children}
