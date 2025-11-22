@@ -1,275 +1,279 @@
-// app/(dashboard)/dashboard/page.js
+// app/(dashboard)/Painel/page.js
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { DollarSign, List, Package, TrendingUp, Scale } from "lucide-react"; // Adicionado 'Scale' para o Saldo
-import api from '@/lib/api'; 
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown, 
+  AlertTriangle, 
+  Target,
+  Calendar as CalendarIcon
+} from "lucide-react";
+import api from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TimeSeriesChart } from '../../../components/dashboard/charts/TimeSeriesChart';
-import { CategoryPieChart } from '../../../components/dashboard/charts/CategoryPieChart';
-import { CategoryBarChart } from '../../../components/dashboard/charts/CategoryBarChart';
-import { Skeleton } from '@/components/ui/skeleton'; 
-import Link from 'next/link';
-import { cn } from '@/lib/utils';
+// Componentes UI
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-// Componente para o estado de carregamento (Skeleton)
-const DashboardSkeleton = () => (
-    <div className="flex flex-col gap-8">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-10 w-full sm:w-[480px]" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-48" /></CardContent></Card>
-            <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-48" /></CardContent></Card>
-            <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-24" /></CardContent></Card>
-            <Card><CardHeader><Skeleton className="h-5 w-32" /></CardHeader><CardContent><Skeleton className="h-8 w-40" /></CardContent></Card>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-7">
-            <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
-            <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-48 mb-2" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
-        </div>
-        <div className="grid gap-4 lg:grid-cols-7">
-            <Card className="lg:col-span-4"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
-            <Card className="lg:col-span-3"><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[350px] w-full" /></CardContent></Card>
-        </div>
-    </div>
-);
-
-// Componente para exibir quando uma área não tem dados
-const EmptyState = ({ message }) => (
-    <div className="flex items-center justify-center h-full min-h-[350px] text-center text-muted-foreground">
-        <p>{message}</p>
-    </div>
-);
-
+// Gráficos
+import { CategoryBarChart } from '@/components/dashboard/charts/CategoryBarChart';
+import { CategoryPieChart } from '@/components/dashboard/charts/CategoryPieChart';
+import { TimeSeriesChart } from '@/components/dashboard/charts/TimeSeriesChart';
 
 export default function DashboardPage() {
-  const [period, setPeriod] = useState('monthly');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const { activeProfile } = useAuth();
+    
+    // Estado para os filtros
+    const [period, setPeriod] = useState('monthly');
+    
+    // Estados de dados
+    const [kpis, setKpis] = useState(null);
+    const [charts, setCharts] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  const [pieChartType, setPieChartType] = useState('category');
-
-  const fetchData = useCallback(async (currentPeriod) => {
-    setLoading(true);
-    setError(null);
-    try {
-        const [kpisRes, chartsRes, expensesRes] = await Promise.all([
-            api.get(`/dashboard/kpis?period=${currentPeriod}`),
-            api.get(`/dashboard/charts?period=${currentPeriod}`),
-            api.get(`/dashboard/expenses?period=${currentPeriod}&limit=5`)
-        ]);
-
-        setData({
-            kpis: kpisRes.data,
-            charts: chartsRes.data,
-            recentExpenses: expensesRes.data.data,
-        });
-    } catch (err) {
-      setError("Não foi possível carregar os dados do dashboard. Verifique a conexão com a API.");
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData(period);
-  }, [period, fetchData]);
-
-  if (loading) {
-    return <DashboardSkeleton />;
-  }
-
-  if (error) {
-    return <EmptyState message={error} />;
-  }
-  
-  if (!data) {
-    return <EmptyState message="Nenhum dado disponível." />;
-  }
-  
-  const { kpis, charts, recentExpenses } = data;
-  
-  const pieChartData = pieChartType === 'category' ? charts.pieChart : charts.pieChartByType;
-  const pieChartEmptyMessage = pieChartType === 'category' ? "Sem categorias para exibir." : "Sem tipos de custo para exibir.";
-
-  return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <Tabs defaultValue={period} onValueChange={setPeriod} className="w-full sm:w-auto">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="daily">Diário</TabsTrigger>
-            <TabsTrigger value="weekly">Semanal</TabsTrigger>
-            <TabsTrigger value="monthly">Mensal</TabsTrigger>
-            <TabsTrigger value="quarterly">Trimestral</TabsTrigger>
-            <TabsTrigger value="yearly">Anual</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Card de Receitas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Receitas</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {(kpis.totalRevenues || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            </div>
-            <p className="text-xs text-muted-foreground">no período selecionado</p>
-          </CardContent>
-        </Card>
-        {/* Card de Custos */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Custos</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={cn("text-2xl font-bold", (kpis.totalExpenses || 0) > 0 ? "text-red-600 dark:text-red-400" : "text-foreground")}>
-              -{(kpis.totalExpenses || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            </div>
-            <p className="text-xs text-muted-foreground">no período selecionado</p>
-          </CardContent>
-        </Card>
+    const fetchDashboardData = useCallback(async () => {
+        if (!activeProfile) return;
         
-        {/* <<< INÍCIO DA MODIFICAÇÃO: NOVO CARD DE SALDO >>> */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo (Lucro / Prejuízo)</CardTitle>
-            <Scale className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className={cn("text-2xl font-bold", 
-                kpis.balance > 0 ? "text-green-600 dark:text-green-400" : 
-                kpis.balance < 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
-            )}>
-              {(kpis.balance || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-            </div>
-            <p className="text-xs text-muted-foreground">Receitas - Custos no período</p>
-          </CardContent>
-        </Card>
-        {/* <<< FIM DA MODIFICAÇÃO >>> */}
+        setLoading(true);
+        setError(null);
+        try {
+            // Busca KPIs e Gráficos em paralelo passando o PERÍODO selecionado
+            const [kpisRes, chartsRes] = await Promise.all([
+                api.get(`/dashboard/kpis?period=${period}`),
+                api.get(`/dashboard/charts?period=${period}`)
+            ]);
 
-        {/* Card de Lançamentos */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nº de Lançamentos (Custos)</CardTitle>
-            <List className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{kpis.expenseCount || 0}</div>
-            <p className="text-xs text-muted-foreground">registros no período</p>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid gap-4 lg:grid-cols-7"> 
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Evolução dos Custos (Série Temporal)</CardTitle>
-            <CardDescription>Análise dos gastos ao longo do período selecionado.</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            {charts.lineChart.data && charts.lineChart.data.length > 0 ? (
-                <TimeSeriesChart data={charts.lineChart.labels.map((date, index) => ({ date: date, total: charts.lineChart.data[index] }))} />
-            ) : (
-                <EmptyState message="Sem dados de evolução para exibir." />
-            )}
-          </CardContent>
-        </Card>
+            setKpis(kpisRes.data);
+            setCharts(chartsRes.data);
+        } catch (err) {
+            console.error("Erro ao carregar dashboard:", err);
+            setError("Não foi possível carregar os dados do painel.");
+        } finally {
+            setLoading(false);
+        }
+    }, [activeProfile, period]); // Recarrega quando o perfil ou o período muda
 
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Distribuição de Custos (%)</CardTitle>
-            <CardDescription>
-                {pieChartType === 'category'
-                    ? 'Distribuição percentual dos gastos por categoria.'
-                    : 'Distribuição percentual dos gastos por tipo de custo.'}
-            </CardDescription>
-            <Tabs defaultValue="category" onValueChange={setPieChartType} className="w-full pt-2">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="category">Por Categoria</TabsTrigger>
-                    <TabsTrigger value="type">Por Tipo</TabsTrigger>
-                </TabsList>
-            </Tabs>
-          </CardHeader>
-          <CardContent>
-            {pieChartData && pieChartData.length > 0 ? (
-                <CategoryPieChart data={pieChartData} />
-            ) : (
-                <EmptyState message={pieChartEmptyMessage} />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid gap-4 lg:grid-cols-7">
-        <Card className="lg:col-span-4">
-            <CardHeader>
-                <CardTitle>Top 5 Categorias (Acumulado)</CardTitle>
-                <CardDescription>Categorias com o maior volume de gastos no período.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {charts.pieChart && charts.pieChart.length > 0 ? (
-                    <CategoryBarChart data={charts.pieChart} />
-                ) : (
-                    <EmptyState message="Sem dados para exibir." />
-                )}
-            </CardContent>
-        </Card>
+    useEffect(() => {
+        fetchDashboardData();
+    }, [fetchDashboardData]);
 
-        <Card className="lg:col-span-3">
-            <CardHeader>
-                <CardTitle>Custos Recentes</CardTitle>
-                <CardDescription>Os últimos custos registrados no período.</CardDescription>
-                <div className="ml-auto">
-                    <Link href="/expenses" className="text-sm font-medium text-blue-600 hover:underline">
-                        Ver Todos
-                    </Link>
+    // Formatação de moeda
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('pt-BR', { 
+            style: 'currency', 
+            currency: 'BRL' 
+        }).format(value || 0);
+    };
+
+    // Texto dinâmico do período para o subtítulo
+    const getPeriodLabel = () => {
+        switch (period) {
+            case 'daily': return 'hoje';
+            case 'weekly': return 'nesta semana';
+            case 'monthly': return 'neste mês';
+            case 'quarterly': return 'neste trimestre';
+            case 'yearly': return 'neste ano';
+            default: return 'neste período';
+        }
+    };
+
+    if (!activeProfile) {
+        return <div className="p-8 text-center text-muted-foreground">Selecione um perfil para visualizar os dados.</div>;
+    }
+
+    if (loading) {
+        return <DashboardSkeleton />;
+    }
+
+    // Cálculos para a barra de progresso da meta total (Orçamento)
+    // Nota: As metas geralmente são mensais, então a comparação faz mais sentido no filtro 'monthly'.
+    // Porém, exibimos o cálculo proporcional baseados nos dados retornados.
+    const totalSpent = kpis?.totalExpenses || 0;
+    const totalBudget = kpis?.totalGoals || 0; 
+    const budgetProgress = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+    const isOverBudget = totalSpent > totalBudget;
+
+    return (
+        <div className="space-y-8">
+            {/* Cabeçalho com Filtro */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Painel Financeiro</h1>
+                    <p className="text-muted-foreground">
+                        Visão geral de <strong>{activeProfile.name}</strong> {getPeriodLabel()}.
+                    </p>
                 </div>
-            </CardHeader>
-            <CardContent>
-            <Table>
-                <TableHeader>
-                <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                </TableRow>
-                </TableHeader>
-                <TableBody>
-                {recentExpenses && recentExpenses.length > 0 ? (
-                    recentExpenses.map((expense) => (
-                    <TableRow key={expense.id}>
-                        <TableCell className="font-medium">{new Date(expense.expense_date).toLocaleDateString('pt-BR')}</TableCell>
-                        <TableCell>{expense.description.substring(0, 30)}...</TableCell>
-                        <TableCell className="text-right">
-                            {parseFloat(expense.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                        </TableCell>
-                    </TableRow>
-                    ))
-                ) : (
-                    <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
-                            Nenhum custo registrado neste período.
-                        </TableCell>
-                    </TableRow>
-                )}
-                </TableBody>
-            </Table>
-            </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+                
+                {/* Seletor de Período */}
+                <div className="flex items-center gap-2">
+                    <Select value={period} onValueChange={setPeriod}>
+                        <SelectTrigger className="w-[180px]">
+                            <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <SelectValue placeholder="Período" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="daily">Hoje</SelectItem>
+                            <SelectItem value="weekly">Esta Semana</SelectItem>
+                            <SelectItem value="monthly">Este Mês</SelectItem>
+                            <SelectItem value="quarterly">Este Trimestre</SelectItem>
+                            <SelectItem value="yearly">Este Ano</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+
+            {/* Alertas de Meta (Vindos do Backend) */}
+            {kpis?.goalAlert && (
+                <Alert variant={kpis.goalAlert.status === 'critical' ? "destructive" : "default"} className="border-l-4 border-l-red-500 bg-red-50 dark:bg-red-900/20">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Atenção à Meta Mensal</AlertTitle>
+                    <AlertDescription>
+                        {kpis.goalAlert.message}
+                    </AlertDescription>
+                </Alert>
+            )}
+
+            {/* Cards de KPI */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {/* 1. Receitas */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Receitas Totais</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(kpis?.totalRevenues)}</div>
+                        <p className="text-xs text-muted-foreground">Entradas confirmadas</p>
+                    </CardContent>
+                </Card>
+
+                {/* 2. Despesas */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Despesas Totais</CardTitle>
+                        <TrendingDown className="h-4 w-4 text-red-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(kpis?.totalExpenses)}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {kpis?.expenseCount} lançamentos
+                        </p>
+                    </CardContent>
+                </Card>
+
+                {/* 3. Saldo */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Saldo em Caixa</CardTitle>
+                        <DollarSign className="h-4 w-4 text-blue-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className={`text-2xl font-bold ${kpis?.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            {formatCurrency(kpis?.balance)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">Receitas - Despesas</p>
+                    </CardContent>
+                </Card>
+
+                {/* 4. Meta Total (Orçamento) */}
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Orçamento (Metas)</CardTitle>
+                        <Target className="h-4 w-4 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatCurrency(totalBudget)}</div>
+                        
+                        {/* Só mostra a barra de progresso se houver uma meta definida e o período for mensal (ou se quiser mostrar sempre, remova a condição) */}
+                        {totalBudget > 0 ? (
+                            <>
+                                <div className="mt-2">
+                                    <Progress 
+                                        value={Math.min(budgetProgress, 100)} 
+                                        className={`h-2 ${isOverBudget ? 'bg-red-200' : ''}`} 
+                                        indicatorClassName={isOverBudget ? 'bg-red-500' : 'bg-green-500'}
+                                    />
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {isOverBudget 
+                                        ? `Excedido em ${formatCurrency(totalSpent - totalBudget)}` 
+                                        : `Restam ${formatCurrency(totalBudget - totalSpent)}`}
+                                </p>
+                            </>
+                        ) : (
+                            <p className="text-xs text-muted-foreground mt-2">Nenhuma meta definida.</p>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Área Gráfica */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                
+                {/* Evolução Diária (Linha) */}
+                <Card className="col-span-4">
+                    <CardHeader>
+                        <CardTitle>Fluxo de Caixa</CardTitle>
+                        <CardDescription>Evolução das despesas ao longo do tempo.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pl-2">
+                        <TimeSeriesChart data={charts?.lineChart?.data.map((val, i) => ({
+                            date: charts.lineChart.labels[i],
+                            total: val
+                        })) || []} />
+                    </CardContent>
+                </Card>
+
+                {/* Categorias (Pizza) */}
+                <Card className="col-span-3">
+                    <CardHeader>
+                        <CardTitle>Distribuição por Categoria</CardTitle>
+                        <CardDescription>Para onde está indo o dinheiro?</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <CategoryPieChart data={charts?.pieChart || []} />
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Categorias (Barra) - Top Gastos */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Maiores Gastos por Categoria</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <CategoryBarChart data={charts?.pieChart || []} />
+                </CardContent>
+            </Card>
+        </div>
+    );
+}
+
+function DashboardSkeleton() {
+    return (
+        <div className="space-y-8">
+            <div className="flex justify-between items-center">
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-64" />
+                    <Skeleton className="h-4 w-48" />
+                </div>
+                <Skeleton className="h-10 w-[180px]" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <Card key={i}><CardContent className="p-6"><Skeleton className="h-20" /></CardContent></Card>
+                ))}
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card><CardContent className="p-6"><Skeleton className="h-[300px]" /></CardContent></Card>
+                <Card><CardContent className="p-6"><Skeleton className="h-[300px]" /></CardContent></Card>
+            </div>
+        </div>
+    );
 }
